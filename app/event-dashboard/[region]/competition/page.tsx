@@ -106,6 +106,10 @@ export default function CompetitionEntryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<{entries: number, totalFee: number} | null>(null);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'payfast' | 'eft' | null>(null);
+  const [showEftModal, setShowEftModal] = useState(false);
+  const [eftInvoiceNumber, setEftInvoiceNumber] = useState('');
 
   useEffect(() => {
     if (region && eventId) {
@@ -344,24 +348,24 @@ export default function CompetitionEntryPage() {
 
   const getStartingFee = (performanceType: string) => {
     if (performanceType === 'Solo') {
-      return 5; // R5 for 1 solo (TESTING - plus R5 registration)
+      return 400; // R400 for 1 solo (plus R300 registration)
     } else if (performanceType === 'Duet' || performanceType === 'Trio') {
-      return 280; // R280 per person (plus R5 registration each)
+      return 280; // R280 per person (plus R300 registration each)
     } else if (performanceType === 'Group') {
-      return 220; // R220 per person for small groups (plus R5 registration each)
+      return 220; // R220 per person for small groups (plus R300 registration each)
     }
     return 0;
   };
 
   const getFeeExplanation = (performanceType: string) => {
     if (performanceType === 'Solo') {
-      return 'Solo packages (TESTING): 1 solo R5, 2 solos R10, 3 solos R15, 4 solos R20, 5th FREE. Plus R5 registration.';
+      return 'Solo packages: 1 solo R400, 2 solos R750, 3 solos R1000, 4 solos R1200, 5th FREE. Plus R300 registration.';
     } else if (performanceType === 'Duet' || performanceType === 'Trio') {
-      return 'R280 per person + R5 registration each';
+      return 'R280 per person + R300 registration each';
     } else if (performanceType === 'Group') {
-      return 'Small groups (4-9): R220pp, Large groups (10+): R190pp. Plus R5 registration each.';
+      return 'Small groups (4-9): R220pp, Large groups (10+): R190pp. Plus R300 registration each.';
     }
-    return 'Per person + R5 registration each';
+    return 'Per person + R300 registration each';
   };
 
   // NEW: Helper function to get maximum duration display for performance type
@@ -412,21 +416,21 @@ export default function CompetitionEntryPage() {
       case 'Solo': return { min: 1, max: 1 };
       case 'Duet': return { min: 2, max: 2 };
       case 'Trio': return { min: 3, max: 3 };
-      case 'Group': return { min: 4, max: 10 };
-      default: return { min: 1, max: 10 };
+      case 'Group': return { min: 4, max: 30 };
+      default: return { min: 1, max: 30 };
     }
   };
 
   const calculateEntryFee = (performanceType: string, participantCount: number) => {
     if (performanceType === 'Solo') {
-      // Solo packages: 1 solo R5 (TESTING), 2 solos R10, 3 solos R15, 4 solos R20, 5th FREE
+      // Solo packages: 1 solo R400, 2 solos R750, 3 solos R1000, 4 solos R1200, 5th FREE
       const soloCount = entries.filter(entry => entry.performanceType === 'Solo').length + 1; // +1 for current entry
-      if (soloCount === 1) return 5; // TESTING: Changed from R400 to R5
-      if (soloCount === 2) return 10 - 5; // R5 for 2nd solo (total R10)
-      if (soloCount === 3) return 15 - 10; // R5 for 3rd solo (total R15)
-      if (soloCount === 4) return 20 - 15; // R5 for 4th solo (total R20)
+      if (soloCount === 1) return 400;
+      if (soloCount === 2) return 750 - 400; // R350 for 2nd solo (total R750)
+      if (soloCount === 3) return 1000 - 750; // R250 for 3rd solo (total R1000)
+      if (soloCount === 4) return 1200 - 1000; // R200 for 4th solo (total R1200)
       if (soloCount >= 5) return 0; // 5th solo is FREE
-      return 5; // TESTING: Changed from R400 to R5
+      return 400;
     } else if (performanceType === 'Duet' || performanceType === 'Trio') {
       return 280 * participantCount;
     } else if (performanceType === 'Group') {
@@ -533,10 +537,10 @@ export default function CompetitionEntryPage() {
         // Recalculate solo fees based on new positioning
         soloEntries.forEach((entry, index) => {
           const soloCount = index + 1;
-          if (soloCount === 1) entry.fee = 5; // TESTING: Changed from 400 to 5
-          else if (soloCount === 2) entry.fee = 10 - 5; // R5 for 2nd solo (TESTING)
-          else if (soloCount === 3) entry.fee = 15 - 10; // R5 for 3rd solo (TESTING)
-          else if (soloCount === 4) entry.fee = 20 - 15; // R5 for 4th solo (TESTING)
+          if (soloCount === 1) entry.fee = 400;
+          else if (soloCount === 2) entry.fee = 750 - 400; // R350 for 2nd solo
+          else if (soloCount === 3) entry.fee = 1000 - 750; // R250 for 3rd solo
+          else if (soloCount === 4) entry.fee = 1200 - 1000; // R200 for 4th solo
           else if (soloCount >= 5) entry.fee = 0; // 5th+ solo is FREE
         });
       }
@@ -551,7 +555,7 @@ export default function CompetitionEntryPage() {
     entries.forEach(entry => {
       entry.participantIds.forEach(id => uniqueParticipants.add(id));
     });
-    const registrationFee = uniqueParticipants.size * 5; // TESTING: Changed from 300 to 5
+    const registrationFee = uniqueParticipants.size * 300;
     return { performanceFee, registrationFee, total: performanceFee + registrationFee };
   };
 
@@ -567,154 +571,25 @@ export default function CompetitionEntryPage() {
     return calculateEntryFee(showAddForm, currentForm.participantIds.length);
   };
 
-  // Test payment function - creates a real test entry then initiates R5 payment
-  const handleTestPayment = async () => {
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);
-
-    try {
-      success('Creating test entry and initiating R5 payment...');
-      
-      // Debug logging
-      console.log('🔍 Debug data:', {
-        isStudioMode,
-        studioInfo,
-        contestant,
-        availableDancers,
-        eventId
-      });
-      
-      // Step 1: Get valid participant IDs (dancers)
-      let validParticipantIds: string[] = [];
-      let participantName = 'Test Participant';
-      
-      if (isStudioMode && availableDancers && availableDancers.length > 0) {
-        // Use the first available dancer from the studio
-        const dancer = availableDancers[0];
-        if (dancer && dancer.id) {
-          validParticipantIds = [dancer.id];
-          participantName = dancer.name || 'Studio Dancer';
-          console.log('✅ Using studio dancer:', dancer);
-        } else {
-          throw new Error('Studio dancer data is invalid - missing ID');
-        }
-      } else if (!isStudioMode && contestant?.dancers && contestant.dancers.length > 0) {
-        // Use the first dancer from the contestant
-        const dancer = contestant.dancers[0];
-        if (dancer && dancer.id) {
-          validParticipantIds = [dancer.id];
-          participantName = dancer.name || 'Individual Dancer';
-          console.log('✅ Using contestant dancer:', dancer);
-        } else {
-          throw new Error('Contestant dancer data is invalid - missing ID');
-        }
-      } else if (!isStudioMode && contestant && contestant.id) {
-        // For individual contestants without separate dancer entries, use contestant as participant
-        validParticipantIds = [contestant.id];
-        participantName = contestant.name || 'Individual Contestant';
-        console.log('✅ Using contestant as participant:', contestant);
-      } else {
-        // No valid dancers available
-        console.error('❌ No valid dancers found:', {
-          isStudioMode,
-          availableDancers,
-          contestant,
-          availableDancersCount: availableDancers?.length || 0,
-          contestantDancersCount: contestant?.dancers?.length || 0
-        });
-        throw new Error('No dancers available for test entry. Please ensure you have dancers registered.');
-      }
-      
-      // Step 2: Create a real test entry
-      const testEntryData = {
-        eventId: eventId,
-        contestantId: isStudioMode ? studioInfo?.id : contestant?.id,
-        eodsaId: isStudioMode ? studioInfo?.registrationNumber : contestant?.eodsaId,
-        participantIds: validParticipantIds, // Use actual dancer IDs
-        calculatedFee: 5.00, // R5 test fee
-        itemName: `🧪 TEST ENTRY - ${participantName} - R5 Payment Test`,
-        choreographer: 'Test Choreographer',
-        mastery: 'Water (Competitive)',
-        itemStyle: 'Test Style',
-        estimatedDuration: 2,
-        entryType: 'live' as const,
-        musicFileUrl: null,
-        musicFileName: null,
-        videoExternalUrl: null,
-        videoExternalType: null,
-        performanceType: 'Solo'
-      };
-      
-      console.log('📝 Creating test entry with data:', testEntryData);
-
-      // Create the test entry first
-      const createEntryResponse = await fetch('/api/event-entries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testEntryData),
-      });
-
-      if (!createEntryResponse.ok) {
-        const errorData = await createEntryResponse.json();
-        throw new Error(errorData.error || 'Failed to create test entry');
-      }
-
-      const { eventEntry } = await createEntryResponse.json();
-      success(`Test entry created: ${eventEntry.id}`);
-
-      // Step 2: Initiate payment for the real entry
-      const testPaymentData = {
-        entryId: eventEntry.id, // Use the real entry ID
-        eventId: eventId,
-        userId: isStudioMode ? studioInfo?.id : contestant?.id,
-        userFirstName: isStudioMode ? 'Test Studio' : (contestant?.name?.split(' ')[0] || 'Test'),
-        userLastName: isStudioMode ? 'Payment' : (contestant?.name?.split(' ').slice(1).join(' ') || 'User'),
-        userEmail: isStudioMode ? (studioInfo?.email || 'teststudio@eodsa.test') : (contestant?.email || 'testuser@eodsa.test'),
-        amount: 5.00, // Fixed R5 for testing
-        itemName: 'TEST PAYMENT - Competition Entry',
-        itemDescription: `Test payment for entry: ${eventEntry.itemName}`,
-        isBatchPayment: false // This is now a real entry payment
-      };
-
-      const paymentResponse = await fetch('/api/payments/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testPaymentData),
-      });
-
-      if (paymentResponse.ok) {
-        // Response should be HTML for PayFast redirect
-        const paymentHtml = await paymentResponse.text();
-        
-        // Create a new window/tab with the payment form
-        const paymentWindow = window.open('', '_blank');
-        if (paymentWindow) {
-          paymentWindow.document.write(paymentHtml);
-          paymentWindow.document.close();
-          success('Test entry created and payment initiated! Complete the payment in the new window.');
-        } else {
-          throw new Error('Unable to open payment window. Please check your popup blocker.');
-        }
-      } else {
-        const errorData = await paymentResponse.json();
-        throw new Error(errorData.error || 'Failed to initiate test payment');
-      }
-    } catch (testError: any) {
-      console.error('Test payment error:', testError);
-      error(`Failed to create test entry or initiate payment: ${testError.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleProceedToPayment = async () => {
     if (entries.length === 0 || isSubmitting) return;
+    setShowPaymentMethodModal(true);
+  };
 
+  const handlePaymentMethodSelection = async (method: 'payfast' | 'eft') => {
+    setSelectedPaymentMethod(method);
+    setShowPaymentMethodModal(false);
+
+    if (method === 'eft') {
+      setShowEftModal(true);
+      return;
+    }
+
+    // Handle PayFast payment (existing logic)
+    await processPayFastPayment();
+  };
+
+  const processPayFastPayment = async () => {
     setIsSubmitting(true);
 
     try {
@@ -734,10 +609,10 @@ export default function CompetitionEntryPage() {
         itemStyle: entry.itemStyle,
         estimatedDuration: parseFloat(entry.estimatedDuration.replace(':', '.')) || 2,
         entryType: entry.entryType,
-        musicFileUrl: entry.musicFileUrl || null,
-        musicFileName: entry.musicFileName || null,
-        videoExternalUrl: entry.videoExternalUrl || null,
-        videoExternalType: entry.videoExternalType || null,
+        musicFileUrl: entry.musicFileUrl || undefined,
+        musicFileName: entry.musicFileName || undefined,
+        videoExternalUrl: entry.videoExternalUrl || undefined,
+        videoExternalType: entry.videoExternalType || undefined,
         performanceType: entry.performanceType
       }));
 
@@ -798,19 +673,105 @@ export default function CompetitionEntryPage() {
           paymentWindow.document.write(paymentHtml);
           paymentWindow.document.close();
         } else {
-          throw new Error('Unable to open payment window. Please check your popup blocker.');
+          // Fallback: try to redirect in current window
+          document.open();
+          document.write(paymentHtml);
+          document.close();
         }
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to initiate payment');
       }
-      setSubmissionResult({ entries: entries.length, totalFee });
-      setShowSuccessModal(true);
+    } catch (paymentError: any) {
+      console.error('Payment error:', paymentError);
+      error(`Failed to initiate payment: ${paymentError.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEftPayment = async () => {
+    // Payment reference is optional - users can pay later
+
+    setIsSubmitting(true);
+
+    try {
+      const totalFee = calculateTotalFee().total;
       
-      // Navigation is now handled by the modal buttons
-    } catch (submitError: any) {
-      console.error('Error during submission:', submitError);
-      error(`Error during submission: ${submitError.message || 'Unknown error'}`);
+      // Create entry data for EFT payment - submit entries immediately as pending
+      const batchEntryData = entries.map(entry => ({
+        eventId: eventId,
+        contestantId: isStudioMode ? studioInfo?.id : contestant?.id,
+        eodsaId: isStudioMode ? studioInfo?.registrationNumber : contestant?.eodsaId,
+        participantIds: entry.participantIds,
+        calculatedFee: entry.fee,
+        itemName: entry.itemName,
+        choreographer: entry.choreographer,
+        mastery: entry.mastery,
+        itemStyle: entry.itemStyle,
+        estimatedDuration: parseFloat(entry.estimatedDuration.replace(':', '.')) || 2,
+        entryType: entry.entryType,
+        musicFileUrl: entry.musicFileUrl || undefined,
+        musicFileName: entry.musicFileName || undefined,
+        videoExternalUrl: entry.videoExternalUrl || undefined,
+        videoExternalType: entry.videoExternalType || undefined,
+        performanceType: entry.performanceType
+      }));
+
+      const userName = isStudioMode ? 
+        (studioInfo?.name || 'Studio Manager') : 
+        (contestant?.name || 'Contestant');
+      
+      const userEmail = isStudioMode ? 
+        (studioInfo?.email || 'studio@example.com') : 
+        (contestant?.email || 'contestant@example.com');
+
+      const eftPaymentData = {
+        eventId: eventId,
+        userId: isStudioMode ? studioInfo?.id : contestant?.id,
+        userEmail: userEmail,
+        userName: userName,
+        eodsaId: isStudioMode ? studioInfo?.registrationNumber : contestant?.eodsaId,
+        amount: totalFee,
+        invoiceNumber: eftInvoiceNumber.trim(),
+        itemDescription: entries.map(e => `${e.performanceType}: ${e.itemName}`).join(', '),
+        entries: batchEntryData,
+        // NEW: Immediately submit entries as pending
+        submitImmediately: true
+      };
+
+      // Submit EFT payment and entries directly
+      const response = await fetch('/api/payments/eft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eftPaymentData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          // Close EFT modal and show success
+          setShowEftModal(false);
+          setEftInvoiceNumber('');
+          setSubmissionResult({ entries: entries.length, totalFee });
+          setShowSuccessModal(true);
+          setEntries([]); // Clear entries after successful submission
+          
+          // Note: User will email chenique@elementscentral.com manually after payment
+          
+          success('EFT payment submitted successfully! Your entries are pending payment verification.');
+        } else {
+          throw new Error(result.error || 'Failed to submit EFT payment');
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit EFT payment');
+      }
+    } catch (eftError: any) {
+      console.error('EFT payment error:', eftError);
+      error(`Failed to submit EFT payment: ${eftError.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -1424,10 +1385,10 @@ export default function CompetitionEntryPage() {
                      </div>
                      {showAddForm === 'Solo' && previewFee > 0 && (
                        <div className="text-xs text-slate-400 mt-1">
-                         {entries.filter(e => e.performanceType === 'Solo').length === 0 && '1st Solo: R5 (TESTING)'}
-                         {entries.filter(e => e.performanceType === 'Solo').length === 1 && '2nd Solo: R5 (Package: R10 total) - TESTING'}
-                         {entries.filter(e => e.performanceType === 'Solo').length === 2 && '3rd Solo: R5 (Package: R15 total) - TESTING'}
-                         {entries.filter(e => e.performanceType === 'Solo').length === 3 && '4th Solo: R5 (Package: R20 total) - TESTING'}
+                         {entries.filter(e => e.performanceType === 'Solo').length === 0 && '1st Solo: R400'}
+                         {entries.filter(e => e.performanceType === 'Solo').length === 1 && '2nd Solo: R350 (Package: R750 total)'}
+                         {entries.filter(e => e.performanceType === 'Solo').length === 2 && '3rd Solo: R250 (Package: R1000 total)'}
+                         {entries.filter(e => e.performanceType === 'Solo').length === 3 && '4th Solo: R200 (Package: R1200 total)'}
                          {entries.filter(e => e.performanceType === 'Solo').length >= 4 && '5th+ Solo: FREE!'}
                        </div>
                      )}
@@ -1573,7 +1534,7 @@ export default function CompetitionEntryPage() {
                    <span>R{feeCalculation.registrationFee}</span>
                  </div>
                  <div className="text-xs text-slate-400">
-                   ({new Set(entries.flatMap(e => e.participantIds)).size} unique participants × R5) - TESTING
+                   ({new Set(entries.flatMap(e => e.participantIds)).size} unique participants × R300)
                  </div>
                  
                  {/* Preview total with pending entry */}
@@ -1588,61 +1549,32 @@ export default function CompetitionEntryPage() {
                  
                  <div className="border-t border-slate-600 pt-2">
                    <div className="flex justify-between font-semibold text-lg text-emerald-400">
-                     <span>Competition Total:</span>
+                     <span>Total:</span>
                      <span className="transition-all duration-300 transform hover:scale-110">
                        R{feeCalculation.total}
                      </span>
                    </div>
                  </div>
-
-                 {/* PayFast Processing Fee Breakdown */}
-                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mt-3">
-                   <div className="text-sm text-orange-300 font-medium mb-2">💳 Payment Processing</div>
-                   <div className="flex justify-between text-sm text-slate-300 mb-1">
-                     <span>Subtotal:</span>
-                     <span>R{feeCalculation.total}</span>
-                   </div>
-                   <div className="flex justify-between text-sm text-slate-300 mb-2">
-                     <span>PayFast Processing Fee (3.5%):</span>
-                     <span>R{Math.max(feeCalculation.total * 0.035, 2.00).toFixed(2)}</span>
-                   </div>
-                   <div className="border-t border-orange-500/20 pt-2">
-                     <div className="flex justify-between font-semibold text-white">
-                       <span>Final Payment Amount:</span>
-                       <span className="text-green-400">R{(feeCalculation.total + Math.max(feeCalculation.total * 0.035, 2.00)).toFixed(2)}</span>
-                     </div>
-                   </div>
-                 </div>
                </div>
 
-              <div className="space-y-3">
-                <button
-                  onClick={handleProceedToPayment}
-                  disabled={entries.length === 0 || isSubmitting}
-                  className={`w-full py-4 sm:py-3 text-white rounded-lg font-semibold transition-all duration-300 text-lg sm:text-base min-h-[56px] sm:min-h-auto ${
-                    isSubmitting 
-                      ? 'bg-slate-500 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:bg-slate-500 disabled:cursor-not-allowed'
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Submitting Entries...</span>
-                    </div>
-                  ) : (
-                    'Proceed to Payment'
-                  )}
-                </button>
-                
-                <button
-                  onClick={handleTestPayment}
-                  disabled={isSubmitting}
-                  className="w-full py-3 text-white rounded-lg font-semibold transition-all duration-300 text-sm bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 disabled:bg-slate-500 disabled:cursor-not-allowed"
-                >
-                  🧪 Test Payment (R5) - For Testing Only
-                </button>
-              </div>
+              <button
+                onClick={handleProceedToPayment}
+                disabled={entries.length === 0 || isSubmitting}
+                className={`w-full py-4 sm:py-3 text-white rounded-lg font-semibold transition-all duration-300 text-lg sm:text-base min-h-[56px] sm:min-h-auto ${
+                  isSubmitting 
+                    ? 'bg-slate-500 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:bg-slate-500 disabled:cursor-not-allowed'
+                }`}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Submitting Entries...</span>
+                  </div>
+                ) : (
+                  'Proceed to Payment'
+                )}
+              </button>
             </div>
 
             {/* Event Details */}
@@ -1706,11 +1638,20 @@ export default function CompetitionEntryPage() {
             {/* Next Steps */}
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
               <h4 className="text-blue-400 font-semibold mb-2">Next Steps:</h4>
-              <ul className="text-sm text-slate-300 space-y-1">
-                <li>• Payment invoice will be sent to your email</li>
-                <li>• Complete payment to confirm your entries</li>
-                <li>• Check your dashboard for updates</li>
-              </ul>
+              {selectedPaymentMethod === 'eft' ? (
+                <ul className="text-sm text-slate-300 space-y-2">
+                  <li>• ✅ Your entries are now submitted as "pending payment verification"</li>
+                  <li>• 🏦 Make your EFT payment to Elements of Dance (FNB: 63122779094)</li>
+                  <li>• 📧 <strong className="text-emerald-300">After making payment, email chenique@elementscentral.com with your payment reference for entry approval</strong></li>
+                  <li>• 📊 Check your dashboard for updates</li>
+                </ul>
+              ) : (
+                <ul className="text-sm text-slate-300 space-y-1">
+                  <li>• Payment will be processed automatically</li>
+                  <li>• Confirmation email will be sent to you</li>
+                  <li>• Check your dashboard for updates</li>
+                </ul>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -1756,6 +1697,184 @@ export default function CompetitionEntryPage() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Method Selection Modal */}
+      {showPaymentMethodModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 p-8 max-w-lg w-full">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2">💳 Select Payment Method</h2>
+              <p className="text-slate-300">Choose how you'd like to pay for your competition entries</p>
+              
+              <div className="mt-4 p-4 bg-slate-700/50 rounded-lg">
+                <div className="text-slate-300 text-sm space-y-2">
+                  <div className="flex justify-between">
+                    <span>Total Amount:</span>
+                    <span className="text-emerald-400 font-semibold text-lg">R{calculateTotalFee().total}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Entries:</span>
+                    <span>{entries.length} performance{entries.length > 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* PayFast Option */}
+              <button
+                onClick={() => handlePaymentMethodSelection('payfast')}
+                className="w-full p-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-blue-500/25"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="text-3xl">💳</div>
+                  <div className="text-left">
+                    <h3 className="text-lg font-semibold">PayFast - Instant Payment</h3>
+                    <p className="text-sm opacity-90">Pay instantly with credit card or bank transfer</p>
+                    <p className="text-xs opacity-75 mt-1">✓ Instant approval • ✓ Secure payment gateway</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* EFT Option */}
+              <button
+                onClick={() => handlePaymentMethodSelection('eft')}
+                className="w-full p-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/25"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="text-3xl">🏦</div>
+                  <div className="text-left">
+                    <h3 className="text-lg font-semibold">EFT - Bank Transfer</h3>
+                    <p className="text-sm opacity-90">Manual bank transfer - submit entries immediately</p>
+                    <p className="text-xs opacity-75 mt-1">⏳ Entries pending verification • 📧 You email chenique after payment</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowPaymentMethodModal(false)}
+                className="px-6 py-2 text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EFT Payment Modal */}
+      {showEftModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-700/50 p-8 max-w-lg w-full">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2">🏦 EFT Payment Details</h2>
+              <p className="text-slate-300">Make your payment using the banking details below</p>
+            </div>
+
+            {/* Banking Details */}
+            <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 border border-green-500/30 rounded-lg p-6 mb-6">
+              <h3 className="text-green-300 font-semibold mb-4 flex items-center">
+                <span className="text-2xl mr-2">🏦</span>
+                Banking Details
+              </h3>
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300">Account Name:</span>
+                  <span className="text-white font-semibold">Elements of Dance</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300">Bank:</span>
+                  <span className="text-white font-semibold">FNB</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300">Account Number:</span>
+                  <span className="text-white font-mono font-semibold bg-slate-700/50 px-3 py-1 rounded">63122779094</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300">Reference:</span>
+                  <span className="text-emerald-400 font-mono font-semibold bg-slate-700/50 px-3 py-1 rounded">
+                    {isStudioMode ? studioInfo?.registrationNumber : contestant?.eodsaId}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300">Amount:</span>
+                  <span className="text-emerald-400 font-semibold text-lg">R{calculateTotalFee().total}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Reference Input */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-300 mb-3">
+                📋 Payment Reference Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={eftInvoiceNumber}
+                onChange={(e) => setEftInvoiceNumber(e.target.value)}
+                placeholder="Enter your banking reference or transaction number (optional)"
+                className="w-full p-4 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200"
+              />
+              <p className="text-xs text-slate-400 mt-2">
+                Optional: Add your banking reference if you've already made the payment, or leave blank to pay later.
+              </p>
+            </div>
+
+            {/* Updated Payment Process Notice */}
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-6">
+              <div className="flex items-start space-x-2">
+                <span className="text-blue-400 text-xl">📋</span>
+                <div>
+                  <h4 className="text-blue-300 font-semibold">Payment Process</h4>
+                  <div className="text-blue-200 text-sm mt-2 space-y-2">
+                    <p>1. Your entries will be submitted immediately as "pending payment verification"</p>
+                    <p>2. Make your EFT payment using the banking details above (can be done immediately or later)</p>
+                    <p>3. <strong className="text-emerald-300">Email chenique@elementscentral.com with your payment reference for approval</strong></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowEftModal(false);
+                  setEftInvoiceNumber('');
+                }}
+                className="flex-1 px-4 py-3 bg-slate-600 text-white rounded-xl hover:bg-slate-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEftPayment}
+                disabled={isSubmitting}
+                className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                  isSubmitting
+                    ? 'bg-slate-500 cursor-not-allowed text-slate-300'
+                    : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/25'
+                }`}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Submitting...</span>
+                  </div>
+                ) : (
+                  'Submit Entry & Payment Info'
+                )}
+              </button>
             </div>
           </div>
         </div>

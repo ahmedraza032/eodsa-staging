@@ -54,6 +54,26 @@ export const initializeDatabase = async () => {
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS item_number INTEGER`;
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS withdrawn_from_judging BOOLEAN DEFAULT FALSE`;
     
+    // Create EFT payment logs table for tracking manual payments
+    await sqlClient`
+      CREATE TABLE IF NOT EXISTS eft_payment_logs (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        user_email TEXT,
+        user_name TEXT,
+        eodsa_id TEXT,
+        amount DECIMAL(10,2),
+        invoice_number TEXT,
+        item_description TEXT,
+        entries_count INTEGER DEFAULT 0,
+        submitted_at TEXT,
+        status TEXT DEFAULT 'pending_verification',
+        verified_by TEXT,
+        verified_at TEXT,
+        notes TEXT
+      )
+    `;
+    
     // Fix performance type constraint to allow 'All' - FORCE UPDATE
     try {
       console.log('🔧 Updating performance type constraint...');
@@ -1542,7 +1562,49 @@ export const db = {
     }));
   },
 
-
+  // NEW: Get performances by event ID
+  async getPerformancesByEvent(eventId: string) {
+    const sqlClient = getSql();
+    const result = await sqlClient`
+      SELECT 
+        p.*, 
+        c.name as contestant_name,
+        ee.entry_type,
+        ee.music_file_url,
+        ee.music_file_name,
+        ee.video_external_url,
+        ee.video_external_type
+      FROM performances p 
+      JOIN contestants c ON p.contestant_id = c.id 
+      LEFT JOIN event_entries ee ON p.event_entry_id = ee.id
+      WHERE p.event_id = ${eventId}
+      ORDER BY p.scheduled_time ASC
+    ` as any[];
+    
+    return result.map((row: any) => ({
+      id: row.id,
+      eventId: row.event_id,
+      eventEntryId: row.event_entry_id,
+      contestantId: row.contestant_id,
+      title: row.title,
+      participantNames: JSON.parse(row.participant_names),
+      duration: row.duration,
+      itemNumber: row.item_number,
+      withdrawnFromJudging: row.withdrawn_from_judging || false,
+      choreographer: row.choreographer,
+      mastery: row.mastery,
+      itemStyle: row.item_style,
+      scheduledTime: row.scheduled_time,
+      status: row.status,
+      contestantName: row.contestant_name,
+      // PHASE 2: Live vs Virtual Entry Support
+      entryType: row.entry_type || 'live',
+      musicFileUrl: row.music_file_url,
+      musicFileName: row.music_file_name,
+      videoExternalUrl: row.video_external_url,
+      videoExternalType: row.video_external_type
+    })) as (Performance & { contestantName: string })[];
+  },
 
   // Database cleaning - reset all data and create only main admin
   async cleanDatabase() {
@@ -2277,40 +2339,40 @@ export const db = {
         try {
           const registrationStatus = await this.getDancerRegistrationStatus(participantId);
           if (!registrationStatus.registrationFeePaid) {
-            registrationFee += 5; // TESTING: Changed from 300 to 5 per dancer
+            registrationFee += 300; // R300 per dancer who hasn't paid
           }
         } catch (error) {
           // If dancer not found or error, assume they need to pay registration
-          registrationFee += 5; // TESTING: Changed from 300 to 5
+          registrationFee += 300;
         }
       }
     } else {
       // For single participant (solo), assume they need to pay if not specified
-      registrationFee = 5; // TESTING: Changed from 300 to 5
+      registrationFee = 300;
     }
     
     // Calculate performance fees based on type
     if (performanceType === 'Solo') {
-      // Solo fee structure - TESTING VERSION (R5 instead of R400)
+      // Solo fee structure - exactly as specified
       switch (soloCount) {
         case 1:
-          performanceFee = 5; // TESTING: Changed from 400 to 5
+          performanceFee = 400;
           break;
         case 2:
-          performanceFee = 10; // TESTING: Changed from 750 to 10
+          performanceFee = 750;
           break;
         case 3:
-          performanceFee = 15; // TESTING: Changed from 1000 to 15
+          performanceFee = 1000;
           break;
         case 4:
-          performanceFee = 20; // TESTING: Changed from 1200 to 20
+          performanceFee = 1200;
           break;
         case 5:
-          performanceFee = 20; // TESTING: 5th solo is FREE (same total)
+          performanceFee = 1200; // 5th solo is FREE
           break;
         default:
-          // More than 5 solos: 20 + (additional solos * 5)
-          performanceFee = 20 + ((soloCount - 5) * 5); // TESTING: Reduced amounts
+          // More than 5 solos: 1200 + (additional solos * 100)
+          performanceFee = 1200 + ((soloCount - 5) * 100);
       }
     } else if (performanceType === 'Duet' || performanceType === 'Trio') {
       // Duos/trios - R280 per person
@@ -2328,7 +2390,7 @@ export const db = {
       registrationFee,
       performanceFee,
       totalFee: registrationFee + performanceFee,
-      participantsNeedingRegistration: registrationFee / 5 // TESTING: Number of participants who need to pay registration (changed from 300 to 5)
+      participantsNeedingRegistration: registrationFee / 300 // Number of participants who need to pay registration
     };
   },
 
@@ -2691,70 +2753,6 @@ export const db = {
       WHERE id = ${performanceId}
     `;
     return { success: true };
-  },
-
-  // Real-time performance status management
-  async updatePerformanceStatus(performanceId: string, status: string) {
-    const sqlClient = getSql();
-    await sqlClient`
-      UPDATE performances 
-      SET status = ${status}, 
-          updated_at = NOW()
-      WHERE id = ${performanceId}
-    `;
-    return { success: true };
-  },
-
-  async updatePerformanceDisplayOrder(performanceId: string, displayOrder: number) {
-    const sqlClient = getSql();
-    await sqlClient`
-      UPDATE performances 
-      SET display_order = ${displayOrder}
-      WHERE id = ${performanceId}
-    `;
-    return { success: true };
-  },
-
-  async getPerformancesByEvent(eventId: string) {
-    const sqlClient = getSql();
-    const rows = await sqlClient`
-      SELECT p.*, 
-             ee.item_name as title,
-             ee.contestant_id,
-             ee.estimated_duration as duration,
-             ee.entry_type,
-             ee.music_file_url,
-             ee.video_external_url,
-             c.name as contestant_name,
-             ee.participant_ids
-      FROM performances p
-      LEFT JOIN event_entries ee ON p.event_entry_id = ee.id
-      LEFT JOIN contestants c ON ee.contestant_id = c.id
-      WHERE p.event_id = ${eventId}
-      ORDER BY p.display_order ASC, p.item_number ASC, p.created_at ASC
-    `;
-    
-    return (rows as any[]).map((row: any) => ({
-      id: row.id,
-      eventId: row.event_id,
-      eventEntryId: row.event_entry_id,
-      contestantId: row.contestant_id,
-      title: row.title || row.item_name,
-      contestantName: row.contestant_name,
-      participantNames: row.participant_ids ? JSON.parse(row.participant_ids) : [],
-      duration: row.duration || row.estimated_duration,
-      itemNumber: row.item_number,
-      displayOrder: row.display_order,
-      status: row.status || 'scheduled',
-      entryType: row.entry_type,
-      musicFileUrl: row.music_file_url,
-      videoExternalUrl: row.video_external_url,
-      choreographer: row.choreographer,
-      mastery: row.mastery,
-      itemStyle: row.item_style,
-      scheduledTime: row.scheduled_time,
-      withdrawnFromJudging: row.withdrawn_from_judging || false
-    }));
   }
 };
 
@@ -4212,25 +4210,25 @@ export const unifiedDb = {
     participantCount: number = 1,
     participantIds: string[] = []
   ) {
-    const registrationFeePerDancer = 5; // TESTING: Changed from 300 to 5 per dancer
+    const registrationFeePerDancer = 300; // R300 per dancer
     let performanceFee = 0;
     let participantsNeedingRegistration = participantCount;
 
     // Calculate performance fee based on type and solo count
     if (performanceType === 'Solo') {
-      // Solo package pricing: TESTING VERSION (R5 instead of R400)
+      // Solo package pricing: 1 solo R400, 2 solos R750, 3 solos R1000, 4 solos R1200, 5th FREE, additional R100
       if (soloCount === 1) {
-        performanceFee = 5; // TESTING: Changed from 400 to 5
+        performanceFee = 400;
       } else if (soloCount === 2) {
-        performanceFee = 10; // TESTING: Changed from 750 to 10
+        performanceFee = 750;
       } else if (soloCount === 3) {
-        performanceFee = 15; // TESTING: Changed from 1000 to 15
+        performanceFee = 1000;
       } else if (soloCount === 4) {
-        performanceFee = 20; // TESTING: Changed from 1200 to 20
+        performanceFee = 1200;
       } else if (soloCount === 5) {
-        performanceFee = 20; // TESTING: 5th solo is FREE (same total)
+        performanceFee = 1200; // 5th solo is FREE
       } else if (soloCount > 5) {
-        performanceFee = 20 + ((soloCount - 5) * 5); // TESTING: Additional solos R5 each
+        performanceFee = 1200 + ((soloCount - 5) * 100); // Additional solos R100 each
       }
     } else if (performanceType === 'Duet' || performanceType === 'Trio') {
       performanceFee = 280 * participantCount; // R280 per person

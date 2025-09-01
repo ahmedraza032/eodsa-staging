@@ -1,33 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-
-    if (!id) {
+    const eventId = id;
+    
+    // First check if the event exists
+    const event = await db.getEventById(eventId);
+    if (!event) {
       return NextResponse.json(
-        { error: 'Event ID is required' },
-        { status: 400 }
+        { success: false, error: 'Event not found' },
+        { status: 404 }
       );
     }
 
-    // Get performances for the event using the database method
-    const performances = await db.getPerformancesByEvent(id);
+    // Get all performances for this event
+    const performances = await db.getPerformancesByEvent(eventId);
+
+    // Debug: Log what item numbers we're getting
+    console.log('Performances loaded for event', eventId, ':', performances.map(p => ({
+      id: p.id,
+      title: p.title,
+      itemNumber: p.itemNumber
+    })));
 
     return NextResponse.json({
       success: true,
-      performances,
-      count: performances.length
+      performances
     });
-
   } catch (error) {
     console.error('Error fetching event performances:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch event performances' },
+      { success: false, error: 'Failed to fetch event performances' },
       { status: 500 }
     );
   }

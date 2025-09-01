@@ -89,21 +89,21 @@ export async function POST(request: NextRequest) {
           paymentMethod: 'payfast',
           approved: true, // AUTO-APPROVE: Entries are automatically approved after successful payment
           qualifiedForNationals: true,
-          itemNumber: null,
+          itemNumber: undefined,
           itemName: entry.itemName,
           choreographer: entry.choreographer,
           mastery: entry.mastery,
           itemStyle: entry.itemStyle,
           estimatedDuration: entry.estimatedDuration,
           entryType: entry.entryType || 'live',
-          musicFileUrl: entry.musicFileUrl || null,
-          musicFileName: entry.musicFileName || null,
-          videoFileUrl: null,
-          videoFileName: null,
-          videoExternalUrl: entry.videoExternalUrl || null,
+          musicFileUrl: entry.musicFileUrl || undefined,
+          musicFileName: entry.musicFileName || undefined,
+          videoFileUrl: undefined,
+          videoFileName: undefined,
+          videoExternalUrl: entry.videoExternalUrl || undefined,
           videoExternalType: (entry.videoExternalType && ['youtube', 'vimeo', 'other'].includes(entry.videoExternalType)) 
             ? entry.videoExternalType as 'youtube' | 'vimeo' | 'other' 
-            : null
+            : undefined
         });
 
         // Update the entry with payment ID
