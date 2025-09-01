@@ -26,7 +26,7 @@ class SocketClient {
       console.log('❌ Disconnected from socket server');
     });
 
-    this.socket.on('connect_error', (error) => {
+    this.socket.on('connect_error', (error: Error) => {
       console.error('🚫 Socket connection error:', error);
     });
 

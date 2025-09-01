@@ -2753,6 +2753,16 @@ export const db = {
       WHERE id = ${performanceId}
     `;
     return { success: true };
+  },
+
+  async updatePerformanceStatus(performanceId: string, status: string) {
+    const sqlClient = getSql();
+    await sqlClient`
+      UPDATE performances 
+      SET status = ${status}
+      WHERE id = ${performanceId}
+    `;
+    return { success: true };
   }
 };
 
