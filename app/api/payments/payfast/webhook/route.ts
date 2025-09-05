@@ -217,7 +217,11 @@ export async function POST(request: NextRequest) {
         console.log(`🔄 Creating entries automatically for batch payment: ${webhookData.m_payment_id}`);
         
         try {
-          const entriesData = JSON.parse(pendingEntries[0].pending_entries_data);
+          const rawPending = pendingEntries[0].pending_entries_data as any;
+          const entriesData = typeof rawPending === 'string' ? JSON.parse(rawPending) : rawPending;
+          if (!Array.isArray(entriesData)) {
+            throw new Error('pending_entries_data is not an array');
+          }
           
           // Import the database module to create entries
           const { db } = await import('@/lib/database');
