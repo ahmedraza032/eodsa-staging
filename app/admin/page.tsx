@@ -386,82 +386,72 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteEvent = async (event: Event) => {
-    const confirmed = await showConfirm({
-      title: 'Delete Event',
-      message: `Are you sure you want to delete "${event.name}"? This action cannot be undone and will remove all associated entries, payments, and data.`,
-      confirmText: 'Delete Event',
-      cancelText: 'Cancel',
-      type: 'danger'
-    });
+    showConfirm(
+      `Are you sure you want to delete "${event.name}"? This action cannot be undone and will remove all associated entries, payments, and data.`,
+      async () => {
+        setIsDeletingEvent(true);
 
-    if (!confirmed) return;
+        try {
+          const session = localStorage.getItem('adminSession');
+          if (!session) {
+            error('Session expired. Please log in again.');
+            return;
+          }
 
-    setIsDeletingEvent(true);
-
-    try {
-      const session = localStorage.getItem('adminSession');
-      if (!session) {
-        error('Session expired. Please log in again.');
-        return;
-      }
-
-      const response = await fetch(`/api/events/${event.id}/delete`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          confirmed: true,
-          adminSession: session
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        success(`Event "${event.name}" deleted successfully`);
-        fetchData();
-      } else {
-        if (data.details?.requiresConfirmation) {
-          const forceConfirmed = await showConfirm({
-            title: 'Force Delete Event',
-            message: `"${event.name}" has ${data.details.entryCount} entries and ${data.details.paymentCount} payments. Are you absolutely sure you want to delete it?`,
-            confirmText: 'Force Delete',
-            cancelText: 'Cancel',
-            type: 'danger'
+          const response = await fetch(`/api/events/${event.id}/delete`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              confirmed: true,
+              adminSession: session
+            }),
           });
 
-          if (forceConfirmed) {
-            const forceResponse = await fetch(`/api/events/${event.id}/delete`, {
-              method: 'DELETE',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ 
-                confirmed: true, 
-                force: true,
-                adminSession: session
-              }),
-            });
+          const data = await response.json();
 
-            const forceData = await forceResponse.json();
-            if (forceData.success) {
-              success(`Event "${event.name}" force deleted successfully`);
-              fetchData();
+          if (data.success) {
+            success(`Event "${event.name}" deleted successfully`);
+            fetchData();
+          } else {
+            if (data.details?.requiresConfirmation) {
+              showConfirm(
+                `"${event.name}" has ${data.details.entryCount} entries and ${data.details.paymentCount} payments. Are you absolutely sure you want to delete it?`,
+                async () => {
+                  const forceResponse = await fetch(`/api/events/${event.id}/delete`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                      confirmed: true, 
+                      force: true,
+                      adminSession: session
+                    }),
+                  });
+
+                  const forceData = await forceResponse.json();
+                  if (forceData.success) {
+                    success(`Event "${event.name}" force deleted successfully`);
+                    fetchData();
+                  } else {
+                    error(`Failed to delete event: ${forceData.error}`);
+                  }
+                }
+              );
             } else {
-              error(`Failed to delete event: ${forceData.error}`);
+              error(`Failed to delete event: ${data.error}`);
             }
           }
-        } else {
-          error(`Failed to delete event: ${data.error}`);
+        } catch (deleteError) {
+          console.error('Error deleting event:', deleteError);
+          error('Error deleting event. Please check your connection and try again.');
+        } finally {
+          setIsDeletingEvent(false);
         }
       }
-    } catch (deleteError) {
-      console.error('Error deleting event:', deleteError);
-      error('Error deleting event. Please check your connection and try again.');
-    } finally {
-      setIsDeletingEvent(false);
-    }
+    );
   };
 
   const handleCreateJudge = async (e: React.FormEvent) => {

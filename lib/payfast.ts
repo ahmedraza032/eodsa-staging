@@ -79,7 +79,9 @@ export function generatePayFastSignature(data: Record<string, string | undefined
     if (data.hasOwnProperty(key) && key !== 'signature') {
       const value = data[key];
       // INCLUDE empty values - PayFast actual behavior despite docs
-      pfOutput += `${key}=${encodeURIComponent(value.trim()).replace(/%20/g, "+")}&`;
+      if (value !== undefined && value !== null) {
+        pfOutput += `${key}=${encodeURIComponent(value.toString().trim()).replace(/%20/g, "+")}&`;
+      }
     }
   }
 

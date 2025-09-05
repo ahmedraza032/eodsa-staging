@@ -119,33 +119,79 @@ export async function PUT(
       }
     }
 
-    // Build dynamic update query using neon's syntax
-    const updateFields = Object.keys(updateData).map(key => 
-      key.replace(/([A-Z])/g, '_$1').toLowerCase()
-    );
-    const updateValues = Object.values(updateData);
+    // Build update object for each field
+    const updates: Record<string, any> = {};
+    Object.entries(updateData).forEach(([key, value]) => {
+      const dbField = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      updates[dbField] = value;
+    });
 
-    // Build SET clause dynamically
-    const setClause = updateFields.map((field, index) => 
-      `${field} = $${index + 2}`
-    ).join(', ');
+    // Execute dynamic update using individual field updates
+    let updatedEvent;
+    if (updates.name !== undefined) {
+      updatedEvent = await sql`
+        UPDATE events 
+        SET name = ${updates.name}, updated_at = NOW()
+        WHERE id = ${eventId}
+        RETURNING *
+      `;
+    }
+    if (updates.event_date !== undefined) {
+      updatedEvent = await sql`
+        UPDATE events 
+        SET event_date = ${updates.event_date}, updated_at = NOW()
+        WHERE id = ${eventId}
+        RETURNING *
+      `;
+    }
+    if (updates.registration_deadline !== undefined) {
+      updatedEvent = await sql`
+        UPDATE events 
+        SET registration_deadline = ${updates.registration_deadline}, updated_at = NOW()
+        WHERE id = ${eventId}
+        RETURNING *
+      `;
+    }
+    if (updates.location !== undefined) {
+      updatedEvent = await sql`
+        UPDATE events 
+        SET location = ${updates.location}, updated_at = NOW()
+        WHERE id = ${eventId}
+        RETURNING *
+      `;
+    }
+    if (updates.region !== undefined) {
+      updatedEvent = await sql`
+        UPDATE events 
+        SET region = ${updates.region}, updated_at = NOW()
+        WHERE id = ${eventId}
+        RETURNING *
+      `;
+    }
 
-    // Execute update with neon template literal
-    const updateQuery = `
-      UPDATE events 
-      SET ${setClause}, updated_at = NOW()
-      WHERE id = $1
-      RETURNING *
-    `;
+    if (!updatedEvent || updatedEvent.length === 0) {
+      // Fallback: update all possible fields at once
+      updatedEvent = await sql`
+        UPDATE events 
+        SET 
+          name = COALESCE(${updates.name || null}, name),
+          event_date = COALESCE(${updates.event_date || null}, event_date),
+          registration_deadline = COALESCE(${updates.registration_deadline || null}, registration_deadline),
+          location = COALESCE(${updates.location || null}, location),
+          region = COALESCE(${updates.region || null}, region),
+          updated_at = NOW()
+        WHERE id = ${eventId}
+        RETURNING *
+      `;
+    }
 
-    const [updatedEvent] = await sql(updateQuery, eventId, ...updateValues);
-
-    console.log(`✅ Event updated: ${updatedEvent.name} (ID: ${eventId})`);
+    const eventRecord = updatedEvent[0];
+    console.log(`✅ Event updated: ${eventRecord.name} (ID: ${eventId})`);
 
     return NextResponse.json({
       success: true,
       message: 'Event updated successfully',
-      event: updatedEvent
+      event: eventRecord
     });
 
   } catch (error: any) {
