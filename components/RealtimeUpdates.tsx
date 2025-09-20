@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSocketEvent } from '@/hooks/useSocket';
+import { useSocket } from '@/hooks/useSocket';
 
 interface RealtimeUpdatesProps {
   eventId: string;
@@ -20,36 +20,51 @@ export default function RealtimeUpdates({
 }: RealtimeUpdatesProps) {
   const [notifications, setNotifications] = useState<string[]>([]);
 
-  // Listen for performance reordering
-  useSocketEvent('performance:reorder', (data) => {
-    if (data.eventId === eventId && onPerformanceReorder) {
-      onPerformanceReorder(data.performances);
-      addNotification('🔄 Performance order updated');
-    }
-  }, [eventId, onPerformanceReorder]);
+  // Join event room and wire listeners using the unified socket hook
+  const socket = useSocket({ eventId, role: 'general' });
 
-  // Listen for status updates
-  useSocketEvent('performance:status', (data) => {
-    if (data.eventId === eventId && onPerformanceStatus) {
-      onPerformanceStatus(data);
-      addNotification(`📊 Performance status: ${data.status}`);
-    }
-  }, [eventId, onPerformanceStatus]);
+  useEffect(() => {
+    if (!socket.connected) return;
 
-  // Listen for event control commands
-  useSocketEvent('event:control', (data) => {
-    if (data.eventId === eventId && onEventControl) {
-      onEventControl(data);
-      addNotification(`🎯 Event ${data.action}ed`);
-    }
-  }, [eventId, onEventControl]);
+    const handleReorder = (data: any) => {
+      if (data.eventId === eventId && onPerformanceReorder) {
+        onPerformanceReorder(data.performances);
+        addNotification('🔄 Performance order updated');
+      }
+    };
 
-  // Listen for general notifications
-  useSocketEvent('notification', (data) => {
-    if (!data.eventId || data.eventId === eventId) {
-      addNotification(data.message);
-    }
-  }, [eventId]);
+    const handleStatus = (data: any) => {
+      if (data.eventId === eventId && onPerformanceStatus) {
+        onPerformanceStatus(data);
+        addNotification(`📊 Performance status: ${data.status}`);
+      }
+    };
+
+    const handleEventControl = (data: any) => {
+      if (data.eventId === eventId && onEventControl) {
+        onEventControl(data);
+        addNotification(`🎯 Event ${data.action}ed`);
+      }
+    };
+
+    const handleNotification = (data: any) => {
+      if (!data.eventId || data.eventId === eventId) {
+        addNotification(data.message);
+      }
+    };
+
+    socket.on('performance:reorder' as any, handleReorder as any);
+    socket.on('performance:status' as any, handleStatus as any);
+    socket.on('event:control' as any, handleEventControl as any);
+    socket.on('notification' as any, handleNotification as any);
+
+    return () => {
+      socket.off('performance:reorder' as any, handleReorder as any);
+      socket.off('performance:status' as any, handleStatus as any);
+      socket.off('event:control' as any, handleEventControl as any);
+      socket.off('notification' as any, handleNotification as any);
+    };
+  }, [socket.connected, eventId, onPerformanceReorder, onPerformanceStatus, onEventControl]);
 
   const addNotification = (message: string) => {
     setNotifications(prev => [...prev.slice(-4), message]); // Keep last 5

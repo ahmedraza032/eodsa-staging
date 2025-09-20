@@ -355,6 +355,8 @@ export default function BackstageDashboard() {
     };
   }, [socket.connected, eventId]);
 
+  const [searchTerm, setSearchTerm] = useState('');
+
   const loadEventData = async () => {
     setIsLoading(true);
     try {
@@ -371,8 +373,10 @@ export default function BackstageDashboard() {
       const performancesData = await performancesRes.json();
       
       if (performancesData.success) {
+        // Filter live only for backstage
+        const liveOnly = performancesData.performances.filter((p: Performance) => (p.entryType || 'live') === 'live');
         // Sort by item number, then by creation time
-        const sortedPerformances = performancesData.performances.sort((a: Performance, b: Performance) => {
+        const sortedPerformances = liveOnly.sort((a: Performance, b: Performance) => {
           if (a.itemNumber && b.itemNumber) {
             return a.itemNumber - b.itemNumber;
           } else if (a.itemNumber && !b.itemNumber) {
@@ -468,6 +472,17 @@ export default function BackstageDashboard() {
       error('❌ Network error - reverted to original order');
     }
   };
+
+  const visiblePerformances = performances.filter(p => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      p.title.toLowerCase().includes(q) ||
+      p.contestantName.toLowerCase().includes(q) ||
+      p.participantNames.some(name => name.toLowerCase().includes(q)) ||
+      (p.itemNumber && p.itemNumber.toString().includes(searchTerm))
+    );
+  });
 
   const updatePerformanceStatus = async (performanceId: string, status: Performance['status']) => {
     try {
@@ -684,6 +699,14 @@ export default function BackstageDashboard() {
             <div className="text-xs text-gray-500 mt-1">
               Last updated: {new Date().toLocaleTimeString()}
             </div>
+            <div className="mt-3">
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by title, studio, dancer, or item #"
+                className="px-3 py-2 rounded bg-gray-700 border border-gray-600 placeholder-gray-400 text-white w-72"
+              />
+            </div>
           </div>
         </div>
 
@@ -726,7 +749,7 @@ export default function BackstageDashboard() {
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-3">
-              {performances.map((performance) => (
+              {visiblePerformances.map((performance) => (
                 <SortablePerformanceItem
                   key={performance.id}
                   performance={performance}

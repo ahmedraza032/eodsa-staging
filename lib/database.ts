@@ -53,6 +53,10 @@ export const initializeDatabase = async () => {
     await sqlClient`ALTER TABLE events ADD COLUMN IF NOT EXISTS event_end_date TEXT`;
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS item_number INTEGER`;
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS withdrawn_from_judging BOOLEAN DEFAULT FALSE`;
+    await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS announced BOOLEAN DEFAULT FALSE`;
+    await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS announced_by TEXT`;
+    await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS announced_at TEXT`;
+    await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS announcer_notes TEXT`;
     
     // Create EFT payment logs table for tracking manual payments
     await sqlClient`
@@ -3013,13 +3017,13 @@ export const db = {
   },
 
   // NEW: Announcer functionality
-  async markPerformanceAnnounced(performanceId: string, announcedBy: string) {
+  async markPerformanceAnnounced(performanceId: string, announcedBy: string, note?: string) {
     const sqlClient = getSql();
     const timestamp = new Date().toISOString();
     
     await sqlClient`
       UPDATE performances 
-      SET announced = true, announced_by = ${announcedBy}, announced_at = ${timestamp}
+      SET announced = true, announced_by = ${announcedBy}, announced_at = ${timestamp}, announcer_notes = COALESCE(${note || null}, announcer_notes)
       WHERE id = ${performanceId}
     `;
     

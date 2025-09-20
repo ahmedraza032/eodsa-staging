@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import RealtimeUpdates from '@/components/RealtimeUpdates';
 import { useRouter } from 'next/navigation';
 import MusicPlayer from '@/components/MusicPlayer';
 import VideoPlayer from '@/components/VideoPlayer';
@@ -633,7 +634,23 @@ export default function JudgeDashboard() {
     );
   }
 
+  const handlePerformanceReorder = (reordered: any[]) => {
+    setPerformances(prev => {
+      const map = new Map(reordered.map(r => [r.id, r.itemNumber]));
+      return prev.map(p => map.has(p.id) ? { ...p, itemNumber: map.get(p.id) } : p);
+    });
+  };
+
+  const handlePerformanceStatus = (data: any) => {
+    setPerformances(prev => prev.map(p => p.id === data.performanceId ? { ...p, status: data.status } : p));
+  };
+
     return (
+      <RealtimeUpdates
+        eventId={selectedEventId || assignments[0]?.eventId || ''}
+        onPerformanceReorder={handlePerformanceReorder}
+        onPerformanceStatus={handlePerformanceStatus}
+      >
       <div className="min-h-screen bg-gray-50">
       {/* Professional Header */}
       <div className="bg-white shadow-sm border-b">
@@ -960,8 +977,9 @@ export default function JudgeDashboard() {
                     {isSubmittingScore ? 'Submitting...' : (selectedPerformance.hasScore ? 'Update Score' : 'Submit Score')}
                   </button>
                 </div>
-              </div>
-            );
+      </div>
+      </RealtimeUpdates>
+    );
           })()
         )}
 

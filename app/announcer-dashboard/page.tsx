@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/simple-toast';
 import RealtimeUpdates from '@/components/RealtimeUpdates';
+import { useEffect as ReactUseEffect } from 'react';
 
 interface Performance {
   id: string;
@@ -43,6 +44,9 @@ export default function AnnouncerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('scheduled');
+  const [presenceByPerformance, setPresenceByPerformance] = useState<Record<string, any>>({});
+  const [notesByPerformance, setNotesByPerformance] = useState<Record<string, string>>({});
+  const [activePrompt, setActivePrompt] = useState<Performance | null>(null);
 
   useEffect(() => {
     // Check authentication
@@ -111,12 +115,37 @@ export default function AnnouncerDashboard() {
         });
         
         setPerformances(sortedPerformances);
+
+        // Load presence for each performance (registration check-in)
+        try {
+          const presenceEntries: Record<string, any> = {};
+          await Promise.all(sortedPerformances.map(async (p: any) => {
+            const res = await fetch(`/api/presence?performanceId=${p.id}`);
+            const data = await res.json();
+            if (data.success) presenceEntries[p.id] = data.presence;
+          }));
+          setPresenceByPerformance(presenceEntries);
+        } catch {}
       }
     } catch (error) {
       console.error('Error loading event data:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const saveAnnouncementNote = async (performanceId: string, note: string) => {
+    setNotesByPerformance(prev => ({ ...prev, [performanceId]: note }));
+    try {
+      const res = await fetch('/api/performances/announce', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ performanceId, announcedBy: user?.id || 'announcer', note })
+      });
+      if (res.ok) {
+        success('Announcement note saved');
+      }
+    } catch {}
   };
 
   const markAsPerformed = async (performanceId: string, title: string) => {
@@ -148,6 +177,17 @@ export default function AnnouncerDashboard() {
           )
         );
 
+        // Broadcast status change to keep dashboards in sync
+        try {
+          const { socketClient } = await import('@/lib/socket-client');
+          socketClient.emit('performance:status' as any, {
+            performanceId,
+            eventId: selectedEvent,
+            status: 'completed',
+            timestamp: new Date().toISOString()
+          } as any);
+        } catch {}
+
         success(`"${title}" marked as performed - stays green`);
       } else {
         error('Failed to mark performance as performed');
@@ -171,9 +211,16 @@ export default function AnnouncerDashboard() {
           : p
       )
     );
+    // Auto-open announcer prompt when an item becomes READY
+    if (data.status === 'ready') {
+      const perf = performances.find(p => p.id === data.performanceId);
+      if (perf) setActivePrompt(perf);
+    }
   };
 
+  // Always hide virtual entries for announcer
   const filteredPerformances = performances.filter(perf => {
+    const isLive = (perf.entryType || 'live') === 'live';
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'scheduled' && !perf.announced && perf.status !== 'completed') ||
       (statusFilter === 'announced' && perf.announced) ||
@@ -185,11 +232,46 @@ export default function AnnouncerDashboard() {
       perf.participantNames.some(name => name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (perf.itemNumber && perf.itemNumber.toString().includes(searchTerm));
     
-    return matchesStatus && matchesSearch;
+    return isLive && matchesStatus && matchesSearch;
   });
 
   const upcomingPerformances = filteredPerformances.filter(p => !p.announced && p.status !== 'completed');
   const currentPerformance = performances.find(p => p.status === 'in_progress');
+
+  // When we receive initial data, auto-prompt the first READY item
+  useEffect(() => {
+    if (activePrompt) return;
+    const firstReady = performances.find(p => p.status === 'ready');
+    if (firstReady) setActivePrompt(firstReady);
+  }, [performances, activePrompt]);
+
+  const announceNow = async (perf: Performance) => {
+    try {
+      const res = await fetch(`/api/performances/${perf.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'in_progress' })
+      });
+      if (res.ok) {
+        setPerformances(prev => prev.map(p => p.id === perf.id ? { ...p, status: 'in_progress' } : p));
+        try {
+          const { socketClient } = await import('@/lib/socket-client');
+          socketClient.emit('performance:status' as any, {
+            performanceId: perf.id,
+            eventId: selectedEvent,
+            status: 'in_progress',
+            timestamp: new Date().toISOString()
+          } as any);
+        } catch {}
+        setActivePrompt(null);
+        success('Announcing now');
+      } else {
+        error('Failed to set item in progress');
+      }
+    } catch (e) {
+      error('Network error starting announcement');
+    }
+  };
 
   if (isLoading && !event) {
     return (
@@ -444,6 +526,16 @@ export default function AnnouncerDashboard() {
                               ANNOUNCED
                             </span>
                           )}
+
+                          {presenceByPerformance[performance.id]?.present !== undefined && (
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              presenceByPerformance[performance.id]?.present
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {presenceByPerformance[performance.id]?.present ? 'CHECKED-IN' : 'NOT CHECKED-IN'}
+                            </span>
+                          )}
                         </div>
                       </div>
                       
@@ -456,6 +548,24 @@ export default function AnnouncerDashboard() {
                         </button>
                       )}
                     </div>
+                    {/* Announcement Notes */}
+                    <div className="mt-3">
+                      <textarea
+                        value={notesByPerformance[performance.id] || ''}
+                        onChange={(e) => setNotesByPerformance(prev => ({ ...prev, [performance.id]: e.target.value }))}
+                        placeholder="Announcement notes…"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black"
+                        rows={2}
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          onClick={() => saveAnnouncementNote(performance.id, notesByPerformance[performance.id] || '')}
+                          className="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                        >
+                          Save Note
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -466,6 +576,84 @@ export default function AnnouncerDashboard() {
               </div>
             )}
           </div>
+          {/* Full-screen Announcer Prompt */}
+          {activePrompt && (
+            <div className="fixed inset-0 z-50 bg-white">
+              <div className="max-w-6xl mx-auto px-8 py-10">
+                <div className="flex items-start justify-between mb-10">
+                  <div className="flex items-center space-x-6">
+                    <div className="w-24 h-24 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-5xl font-extrabold">
+                      {activePrompt.itemNumber || '?'}
+                    </div>
+                    <div>
+                      <div className="text-2xl text-gray-600">Now Announcing</div>
+                      <h2 className="text-6xl font-extrabold text-black leading-tight">{activePrompt.title}</h2>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActivePrompt(null)}
+                    className="px-5 py-3 rounded-xl border border-gray-300 text-2xl text-gray-700 hover:bg-gray-100"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+                  <div className="md:col-span-2">
+                    <p className="text-3xl text-gray-900">
+                      Performed by <span className="font-semibold">{activePrompt.participantNames.join(', ')}</span>
+                    </p>
+                    <p className="text-2xl text-gray-800 mt-2">
+                      Choreographer: <span className="font-semibold">{activePrompt.choreographer}</span> • Style: <span className="font-semibold">{activePrompt.itemStyle}</span> • Level: <span className="font-semibold">{activePrompt.mastery}</span>
+                    </p>
+                    <p className="text-2xl text-gray-700 mt-2">Duration: {activePrompt.duration} min</p>
+                    {presenceByPerformance[activePrompt.id]?.present !== undefined && (
+                      <div className={`inline-block mt-5 px-5 py-2 text-xl font-bold rounded-full ${
+                        presenceByPerformance[activePrompt.id]?.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {presenceByPerformance[activePrompt.id]?.present ? 'CHECKED-IN' : 'NOT CHECKED-IN'}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-2xl font-semibold text-black mb-3">Announcement notes</label>
+                    <textarea
+                      value={notesByPerformance[activePrompt.id] || ''}
+                      onChange={(e) => setNotesByPerformance(prev => ({ ...prev, [activePrompt!.id]: e.target.value }))}
+                      placeholder="Script or notes the announcer reads…"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl text-2xl text-black"
+                      rows={8}
+                    />
+                    <div className="flex justify-end mt-4 space-x-3">
+                      <button
+                        onClick={() => saveAnnouncementNote(activePrompt.id, notesByPerformance[activePrompt.id] || '')}
+                        className="px-5 py-3 bg-gray-100 text-2xl text-gray-700 rounded-xl hover:bg-gray-200"
+                      >
+                        Save Note
+                      </button>
+                      <button
+                        onClick={() => announceNow(activePrompt)}
+                        className="px-6 py-3 bg-orange-600 text-white text-2xl rounded-xl hover:bg-orange-700 font-extrabold"
+                      >
+                        Announce Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-10">
+                  <div className="text-xl text-gray-500 mb-4">Next up</ndiv>
+                  <div className="flex items-center space-x-4">
+                    {performances.filter(p => !activePrompt || p.id !== activePrompt.id).filter(p => p.status !== 'completed').slice(0, 3).map(p => (
+                      <div key={p.id} className="px-4 py-3 border border-gray-200 rounded-xl bg-white shadow-sm text-xl text-gray-800">
+                        <span className="font-bold">#{p.itemNumber || '?'}</span> {p.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </RealtimeUpdates>

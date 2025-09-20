@@ -26,24 +26,25 @@ export async function PUT(request: NextRequest) {
     // Update item numbers for all performances
     let updateCount = 0;
     
-    for (const performance of performances) {
+    // We expect the incoming payload to include performance ids and new item numbers.
+    // Update the performances table directly using the provided performance ids.
+    for (const perf of performances) {
       try {
-        // Update both event_entries and performances tables
-        await db.updateEventEntry(performance.id, { 
-          itemNumber: performance.itemNumber 
-        });
+        // Validate itemNumber
+        if (typeof perf.itemNumber !== 'number' || perf.itemNumber < 1) continue;
 
-        // Also update the corresponding performance record
-        const allPerformances = await db.getAllPerformances();
-        const performanceRecord = allPerformances.find(p => p.eventEntryId === performance.id);
-        
-        if (performanceRecord) {
-          await db.updatePerformanceItemNumber(performanceRecord.id, performance.itemNumber);
+        // Update performance item number
+        await db.updatePerformanceItemNumber(perf.id, perf.itemNumber);
+
+        // Also try to sync the associated event entry's item number, if we can resolve it
+        const performanceRecord = await db.getPerformanceById(perf.id);
+        if (performanceRecord?.eventEntryId) {
+          await db.updateEventEntry(performanceRecord.eventEntryId, { itemNumber: perf.itemNumber });
         }
 
         updateCount++;
       } catch (error) {
-        console.error(`Error updating performance ${performance.id}:`, error);
+        console.error(`Error updating performance ${perf.id}:`, error);
         // Continue with other updates even if one fails
       }
     }

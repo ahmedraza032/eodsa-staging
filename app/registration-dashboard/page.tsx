@@ -211,7 +211,9 @@ export default function RegistrationDashboard() {
     );
   };
 
+  // Always hide virtual entries for on-site registration
   const filteredPerformances = performances.filter(perf => {
+    const isLive = (perf.entryType || 'live') === 'live';
     const matchesPresence = presenceFilter === 'all' || 
       (presenceFilter === 'present' && perf.presence?.present) ||
       (presenceFilter === 'absent' && !perf.presence?.present);
@@ -223,7 +225,7 @@ export default function RegistrationDashboard() {
       (perf.itemNumber && perf.itemNumber.toString().includes(searchTerm)) ||
       (perf.eodsaId && perf.eodsaId.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    return matchesPresence && matchesSearch;
+    return isLive && matchesPresence && matchesSearch;
   });
 
   const presentCount = performances.filter(p => p.presence?.present).length;

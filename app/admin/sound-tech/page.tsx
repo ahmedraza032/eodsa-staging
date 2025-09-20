@@ -120,8 +120,8 @@ function SoundTechPage() {
     
     return matchesEvent && matchesEntryType && matchesSearch;
   });
-
-  const liveEntries = filteredEntries.filter(entry => entry.entryType === 'live' && entry.musicFileUrl);
+  // Sound desk must see ALL live entries, even without music
+  const liveEntries = filteredEntries.filter(entry => entry.entryType === 'live');
   const virtualEntries = filteredEntries.filter(entry => entry.entryType === 'virtual' && entry.videoExternalUrl);
 
   const downloadAllMusic = () => {
@@ -188,19 +188,19 @@ function SoundTechPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-white">Loading sound tech dashboard...</p>
+          <p className="mt-4 text-black">Loading sound tech dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen ${themeClasses.mainBg}`}>
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className={`${themeClasses.headerBg} shadow border-b ${themeClasses.headerBorder}`}>
+      <div className="bg-white shadow border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
@@ -208,14 +208,14 @@ function SoundTechPage() {
                 <span className="text-white text-xl">🎵</span>
               </div>
               <div>
-                <h1 className={`text-2xl font-bold ${themeClasses.textPrimary}`}>Sound Tech Dashboard</h1>
-                <p className={`${themeClasses.textSecondary}`}>Manage music files for live performances</p>
+                <h1 className="text-2xl font-bold text-black">Sound Tech Dashboard</h1>
+                <p className="text-gray-600">Manage music files for live performances</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push('/admin')}
-                className="px-4 py-2 bg-gray-100 text-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 ← Back to Admin
               </button>
@@ -236,96 +236,93 @@ function SoundTechPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-green-600">🎵</span>
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Live Entries</p>
-                <p className="text-2xl font-semibold text-white">{liveEntries.length}</p>
+                <p className="text-sm font-medium text-black">Live Entries</p>
+                <p className="text-2xl font-semibold text-black">{liveEntries.length}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-blue-600">📹</span>
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Virtual Entries</p>
-                <p className="text-2xl font-semibold text-white">{virtualEntries.length}</p>
+                <p className="text-sm font-medium text-black">Virtual Entries</p>
+                <p className="text-2xl font-semibold text-black">{virtualEntries.length}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-purple-600">🎭</span>
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Total Entries</p>
-                <p className="text-2xl font-semibold text-white">{filteredEntries.length}</p>
+                <p className="text-sm font-medium text-black">Total Entries</p>
+                <p className="text-2xl font-semibold text-black">{filteredEntries.length}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-gray-800 rounded-lg shadow p-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-orange-600">🏆</span>
               </div>
               <div>
-                <p className="text-sm font-medium text-white">Events</p>
-                <p className="text-2xl font-semibold text-white">{events.length}</p>
+                <p className="text-sm font-medium text-black">Events</p>
+                <p className="text-2xl font-semibold text-black">{events.length}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800 rounded-lg shadow p-6 mb-8">
+        <div className="bg-white border border-gray-200 rounded-lg shadow p-6 mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-4 md:space-y-0">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-white mb-2">Search</label>
+              <label className="block text-sm font-medium text-black mb-2">Search</label>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by item name, choreographer, or participant..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white"
-                style={{ color: 'black' }}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-black placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Event</label>
+              <label className="block text-sm font-medium text-black mb-2">Event</label>
               <select
                 value={selectedEvent}
                 onChange={(e) => setSelectedEvent(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white"
-                style={{ color: 'black' }}
+                className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
-                <option value="all" style={{ color: 'black' }}>All Events</option>
+                <option value="all">All Events</option>
                 {events.map(event => (
-                  <option key={event.id} value={event.id} style={{ color: 'black' }}>{event.name}</option>
+                  <option key={event.id} value={event.id}>{event.name}</option>
                 ))}
               </select>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Entry Type</label>
+              <label className="block text-sm font-medium text-black mb-2">Entry Type</label>
               <select
                 value={entryTypeFilter}
                 onChange={(e) => setEntryTypeFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white"
-                style={{ color: 'black' }}
+                className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-black focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
-                <option value="all" style={{ color: 'black' }}>All Types</option>
-                <option value="live" style={{ color: 'black' }}>Live Performances</option>
-                <option value="virtual" style={{ color: 'black' }}>Virtual Performances</option>
+                <option value="all">All Types</option>
+                <option value="live">Live Performances</option>
+                <option value="virtual">Virtual Performances</option>
               </select>
             </div>
           </div>
@@ -333,9 +330,9 @@ function SoundTechPage() {
 
         {/* Music Files List */}
         {entryTypeFilter === 'live' || entryTypeFilter === 'all' ? (
-          <div className="bg-gray-800 rounded-lg shadow mb-8">
+          <div className="bg-white border border-gray-200 rounded-lg shadow mb-8">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-white flex items-center">
+              <h2 className="text-lg font-semibold text-black flex items-center">
                 <span className="mr-2">🎵</span>
                 Live Performances - Music Files ({liveEntries.length})
               </h2>
@@ -354,13 +351,13 @@ function SoundTechPage() {
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-white truncate">
+                            <h3 className="text-lg font-semibold text-black truncate">
                               {entry.itemName}
                             </h3>
-                            <p className="text-sm text-white">
+                            <p className="text-sm text-black">
                               by {entry.choreographer} • {getPerformanceType(entry.participantIds)}
                             </p>
-                            <p className="text-xs text-white">
+                            <p className="text-xs text-gray-600">
                               {getEventName(entry.eventId)} • {entry.participantNames?.join(', ')}
                             </p>
                           </div>
@@ -404,7 +401,7 @@ function SoundTechPage() {
                           )}
                         </button>
                         
-                        <div className="text-right text-xs text-white">
+                        <div className="text-right text-xs text-gray-600">
                           <div>Mastery: {entry.mastery}</div>
                           <div>Style: {entry.itemStyle}</div>
                           <div>Duration: {entry.estimatedDuration}min</div>
@@ -417,7 +414,7 @@ function SoundTechPage() {
             ) : (
               <div className="p-8 text-center">
                 <span className="text-4xl mb-4 block">🎵</span>
-                <p className="text-white">No live performances with music files found</p>
+                <p className="text-gray-700">No live performances with music files found</p>
               </div>
             )}
           </div>
@@ -425,9 +422,9 @@ function SoundTechPage() {
 
         {/* Virtual Entries List */}
         {entryTypeFilter === 'virtual' || entryTypeFilter === 'all' ? (
-          <div className="bg-gray-800 rounded-lg shadow">
+          <div className="bg-white border border-gray-200 rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-white flex items-center">
+              <h2 className="text-lg font-semibold text-black flex items-center">
                 <span className="mr-2">📹</span>
                 Virtual Performances - Video Links ({virtualEntries.length})
               </h2>
@@ -446,13 +443,13 @@ function SoundTechPage() {
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-white truncate">
+                            <h3 className="text-lg font-semibold text-black truncate">
                               {entry.itemName}
                             </h3>
-                            <p className="text-sm text-white">
+                            <p className="text-sm text-black">
                               by {entry.choreographer} • {getPerformanceType(entry.participantIds)}
                             </p>
-                            <p className="text-xs text-white">
+                            <p className="text-xs text-gray-600">
                               {getEventName(entry.eventId)} • {entry.participantNames?.join(', ')}
                             </p>
                           </div>
@@ -491,7 +488,7 @@ function SoundTechPage() {
                           {entry.approved ? 'Approved' : 'Pending'}
                         </span>
                         
-                        <div className="text-right text-xs text-white">
+                        <div className="text-right text-xs text-gray-600">
                           <div>Mastery: {entry.mastery}</div>
                           <div>Style: {entry.itemStyle}</div>
                           <div>Duration: {entry.estimatedDuration}min</div>
@@ -504,7 +501,7 @@ function SoundTechPage() {
             ) : (
               <div className="p-8 text-center">
                 <span className="text-4xl mb-4 block">📹</span>
-                <p className="text-white">No virtual performances found</p>
+                <p className="text-gray-700">No virtual performances found</p>
               </div>
             )}
           </div>
