@@ -21,6 +21,8 @@ interface Performance {
   itemStyle?: string;
   choreographer?: string;
   ageCategory?: string;
+  musicFileUrl?: string;
+  musicFileName?: string;
   performedBy?: string;
   performedAt?: string;
 }
@@ -142,7 +144,14 @@ export default function AnnouncerDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ performanceId, announcedBy: user?.id || 'announcer', note })
       });
-      if (res.ok) success('Announcement note saved'); else error('Failed to save note');
+      if (res.ok) {
+        // Reflect saved note locally if the performance list carries it
+        setPerformances(prev => prev.map(p => p.id === performanceId ? { ...p, announcerNotes: note } as any : p));
+        success('Announcement note saved');
+      } else {
+        const msg = await res.json().catch(() => ({} as any));
+        error(msg?.error || 'Failed to save note');
+      }
     } catch {}
   };
 
@@ -519,16 +528,21 @@ export default function AnnouncerDashboard() {
                                   )}
                                 </>
                               )}
-                          <p className={`text-xs ${performance.status === 'completed' ? 'text-green-600' : performance.announced ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {performance.entryType?.toUpperCase()}
-                            {presenceByPerformance[performance.id]?.present !== undefined && (
-                              <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                                presenceByPerformance[performance.id]?.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                              }`}>
-                                {presenceByPerformance[performance.id]?.present ? 'Music Check-in OK' : 'Check-in Pending'}
-                              </span>
-                            )}
-                          </p>
+                              <p className={`text-xs ${performance.status === 'completed' ? 'text-green-600' : performance.announced ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {performance.entryType?.toUpperCase()}
+                                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                  performance.musicFileUrl ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {performance.musicFileUrl ? 'Track uploaded' : 'Track missing'}
+                                </span>
+                                {presenceByPerformance[performance.id]?.present !== undefined && (
+                                  <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                    presenceByPerformance[performance.id]?.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {presenceByPerformance[performance.id]?.present ? 'Checked-in' : 'Not checked-in'}
+                                  </span>
+                                )}
+                              </p>
                             </div>
                           </div>
                           {performance.performedAt && (
@@ -633,7 +647,7 @@ export default function AnnouncerDashboard() {
                     <p className="text-2xl text-gray-800 mt-2">
                       Choreographer: <span className="font-semibold">{activePrompt.choreographer}</span> • Style: <span className="font-semibold">{activePrompt.itemStyle}</span> • Level: <span className="font-semibold">{activePrompt.mastery}</span>
                     </p>
-                    <p className="text-2xl text-gray-700 mt-2">Duration: {activePrompt.duration} min</p>
+                    {/* Duration hidden by request */}
                     {presenceByPerformance[activePrompt.id]?.present !== undefined && (
                       <div className={`inline-block mt-5 px-5 py-2 text-xl font-bold rounded-full ${
                         presenceByPerformance[activePrompt.id]?.present ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'

@@ -1732,7 +1732,8 @@ export const db = {
         musicFileUrl: row.music_file_url,
         musicFileName: row.music_file_name,
         videoExternalUrl: row.video_external_url,
-        videoExternalType: row.video_external_type
+        videoExternalType: row.video_external_type,
+        announcerNotes: row.announcer_notes || null
       } as Performance & { contestantName: string };
     }));
 

@@ -417,11 +417,12 @@ function SoundTechPage() {
                               {entry.itemName}
                             </h3>
                             <p className="text-sm text-black">
-                              {getPerformanceType(entry.participantIds)} • {entry.itemStyle}
+                              {getPerformanceType(entry.participantIds)} • Style: {entry.itemStyle}
                             </p>
                             {/* Age category not stored on entry; omit to avoid type errors */}
                             <p className="text-xs text-gray-600">
-                              {getEventName(entry.eventId)} • {entry.participantNames?.join(', ')}
+                              Studio: {entry.contestantName || 'Unknown'} • {getEventName(entry.eventId)} • {entry.participantNames?.join(', ')}
+                              {Array.isArray(entry.participantIds) && entry.participantIds.length > 1 ? ` (${entry.participantIds.length} contestants)` : ''}
                             </p>
                           </div>
                         </div>
@@ -495,9 +496,7 @@ function SoundTechPage() {
                         </button>
                         
                         <div className="text-right text-xs text-gray-600">
-                          <div className={`${entry.musicFileUrl ? 'text-green-700' : 'text-red-700'}`}>
-                            {entry.musicFileUrl ? 'Music uploaded' : 'Upload outstanding'}
-                          </div>
+                          <div>Track: <span className={`${entry.musicFileUrl ? 'text-green-700' : 'text-red-700'}`}>{entry.musicFileUrl ? 'Uploaded' : 'Upload outstanding'}</span></div>
                         </div>
                       </div>
                     </div>
@@ -584,7 +583,7 @@ function SoundTechPage() {
                         <div className="text-right text-xs text-gray-600">
                           <div>Mastery: {entry.mastery}</div>
                           <div>Style: {entry.itemStyle}</div>
-                          <div>Duration: {entry.estimatedDuration}min</div>
+                          {/* Duration hidden by request */}
                         </div>
                       </div>
                     </div>

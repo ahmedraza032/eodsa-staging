@@ -180,8 +180,19 @@ export default function MediaDashboard() {
     }
   };
 
-  const handlePerformanceReorder = (reorderedPerformances: any) => {
-    setPerformances(reorderedPerformances);
+  const handlePerformanceReorder = (reorderedPerformances: any[]) => {
+    // Merge item numbers safely like Announcer does
+    setPerformances(prev => {
+      const idToItemNumber = new Map(reorderedPerformances.map((r: any) => [r.id, r.itemNumber]));
+      const merged = prev.map(p => idToItemNumber.has(p.id) ? { ...p, itemNumber: idToItemNumber.get(p.id)! } : p);
+      merged.sort((a, b) => {
+        if (a.itemNumber && b.itemNumber) return a.itemNumber - b.itemNumber;
+        if (a.itemNumber && !b.itemNumber) return -1;
+        if (!a.itemNumber && b.itemNumber) return 1;
+        return a.title.localeCompare(b.title);
+      });
+      return merged;
+    });
     success('Performance order updated by backstage');
   };
 
@@ -597,7 +608,7 @@ export default function MediaDashboard() {
                       <p><strong>Choreographer:</strong> {selectedPerformance.choreographer || 'N/A'}</p>
                       <p><strong>Style:</strong> {selectedPerformance.itemStyle || 'N/A'}</p>
                       <p><strong>Mastery Level:</strong> {selectedPerformance.mastery || 'N/A'}</p>
-                      <p><strong>Duration:</strong> {selectedPerformance.duration || 'N/A'} minutes</p>
+                      {/* Duration hidden by request */}
                       <p><strong>Entry Type:</strong> {selectedPerformance.entryType?.toUpperCase() || 'N/A'}</p>
                       <p><strong>Status:</strong> {selectedPerformance.status?.toUpperCase() || 'SCHEDULED'}</p>
                     </div>

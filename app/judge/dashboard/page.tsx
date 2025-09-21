@@ -756,10 +756,7 @@ export default function JudgeDashboard() {
                         <p className={`font-semibold text-${colorTheme.text}`}>{selectedPerformance.mastery}</p>
                       </div>
                     )}
-                    <div>
-                      <p className="text-gray-600">Duration</p>
-                      <p className="font-semibold text-gray-900">{selectedPerformance.duration} minutes</p>
-                    </div>
+                    {/* Duration hidden by request */}
                     <div>
                       <p className="text-gray-600">Entry Type</p>
                       <p className="font-semibold text-gray-900 flex items-center">

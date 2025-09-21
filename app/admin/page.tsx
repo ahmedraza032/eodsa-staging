@@ -184,6 +184,7 @@ function AdminDashboard() {
   const [showCreateEventModal, setShowCreateEventModal] = useState(false);
   const [showEditEventModal, setShowEditEventModal] = useState(false);
   const [showCreateJudgeModal, setShowCreateJudgeModal] = useState(false);
+  const [showJudgePassword, setShowJudgePassword] = useState(false);
   const [showFinancialModal, setShowFinancialModal] = useState(false);
   const [selectedDancerFinances, setSelectedDancerFinances] = useState<any>(null);
   const [loadingFinances, setLoadingFinances] = useState(false);
@@ -3027,16 +3028,26 @@ function AdminDashboard() {
                   
                 <div className="lg:col-span-1">
                   <label className={`block text-sm font-semibold ${themeClasses.textSecondary} mb-3`}>Password</label>
+                  <div className="relative">
                     <input
-                      type="password"
+                      type={showJudgePassword ? 'text' : 'password'}
                       value={newJudge.password}
                       onChange={(e) => setNewJudge(prev => ({ ...prev, password: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-base font-medium placeholder-gray-400"
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-base font-medium placeholder-gray-400"
                       required
                       minLength={6}
                       placeholder="Minimum 6 characters"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowJudgePassword(v => !v)}
+                      className="absolute inset-y-0 right-2 my-1 px-3 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showJudgePassword ? '🙈' : '👁️'}
+                    </button>
                   </div>
+                </div>
                   
                 <div className="lg:col-span-1 flex items-center justify-center lg:justify-start">
                   <div className="flex items-center">
@@ -3102,19 +3113,19 @@ function AdminDashboard() {
 
       {/* Assign Judge Modal */}
       {showAssignJudgeModal && (
-        <div className="fixed inset-0 bg-white/20 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/30">
-            <div className="p-6 border-b border-gray-200/50">
+        <div className={`fixed inset-0 ${theme === 'dark' ? 'bg-black/70' : 'bg-black/30'} backdrop-blur-sm flex items-center justify-center p-4 z-50`}>
+          <div className={`${themeClasses.modalBg} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border ${themeClasses.modalBorder}`}>
+            <div className={`p-6 border-b ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center">
                     <span className="text-white text-lg">🔗</span>
                   </div>
-                  <h2 className="text-xl font-bold ${themeClasses.textPrimary}">Assign Judge to Event</h2>
+                  <h2 className={`text-xl font-bold ${themeClasses.textPrimary}`}>Assign Judge to Event</h2>
                 </div>
                 <button
                   onClick={() => setShowAssignJudgeModal(false)}
-                  className={`${themeClasses.textMuted} hover:${themeClasses.textSecondary} p-2 rounded-lg hover:bg-gray-100/50 transition-colors`}
+                  className={`${themeClasses.textMuted} p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-white/10 hover:text-gray-200' : 'hover:bg-gray-100/50 hover:text-gray-700'} transition-colors`}
                 >
                   <span className="text-2xl">×</span>
                 </button>
@@ -3128,7 +3139,7 @@ function AdminDashboard() {
                   <select
                     value={assignment.judgeId}
                     onChange={(e) => setAssignment(prev => ({ ...prev, judgeId: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-base font-medium"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-base font-medium ${theme === 'dark' ? 'bg-gray-800/90 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
                     required
                   >
                     <option value="">Choose a judge</option>
@@ -3143,7 +3154,7 @@ function AdminDashboard() {
                   <select
                     value={assignment.eventId}
                     onChange={(e) => setAssignment(prev => ({ ...prev, eventId: e.target.value }))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-base font-medium"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 text-base font-medium ${theme === 'dark' ? 'bg-gray-800/90 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
                     required
                   >
                     <option value="">Choose an event</option>
@@ -3172,11 +3183,11 @@ function AdminDashboard() {
               </div>
           )}
 
-              <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
+              <div className={`flex justify-end space-x-4 mt-8 pt-6 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
                 <button
                   type="button"
                   onClick={() => setShowAssignJudgeModal(false)}
-                  className={`px-6 py-3 border border-gray-300 ${themeClasses.textSecondary} rounded-xl hover:bg-gray-50 transition-colors font-medium`}
+                  className={`px-6 py-3 border ${theme === 'dark' ? 'border-gray-600 hover:bg-white/10' : 'border-gray-300 hover:bg-gray-50'} ${themeClasses.textSecondary} rounded-xl transition-colors font-medium`}
                 >
                   Cancel
                 </button>
