@@ -73,13 +73,22 @@ export default function RegistrationDashboard() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events');
-      const data = await response.json();
+      const eventsRes = await fetch('/api/events');
+      const data = await eventsRes.json();
       if (data.success) {
-        setEvents(data.events || []);
-        if (data.events && data.events.length > 0) {
-          setSelectedEvent(data.events[0].id);
-        }
+        let allowedEventIds: string[] = [];
+        try {
+          const assignRes = await fetch(`/api/admin/staff-assignments?eventId=all&role=registration`);
+          const assignData = await assignRes.json();
+          if (assignData.success) {
+            allowedEventIds = (assignData.assignments || [])
+              .filter((a: any) => a.user_id === user?.id)
+              .map((a: any) => a.event_id);
+          }
+        } catch {}
+        const filtered = allowedEventIds.length > 0 ? (data.events || []).filter((e: any) => allowedEventIds.includes(e.id)) : [];
+        setEvents(filtered);
+        if (filtered.length > 0) setSelectedEvent(filtered[0].id);
       }
     } catch (error) {
       console.error('Error fetching events:', error);

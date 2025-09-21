@@ -189,6 +189,10 @@ function AdminDashboard() {
   const [selectedDancerFinances, setSelectedDancerFinances] = useState<any>(null);
   const [loadingFinances, setLoadingFinances] = useState(false);
   const [showAssignJudgeModal, setShowAssignJudgeModal] = useState(false);
+  const [showAssignStaffModal, setShowAssignStaffModal] = useState(false);
+  const [staffAssignment, setStaffAssignment] = useState({ userId: '', role: 'announcer', eventId: '' });
+  const [isAssigningStaff, setIsAssigningStaff] = useState(false);
+  const [staffAssignments, setStaffAssignments] = useState<any[]>([]);
   const [showEmailTestModal, setShowEmailTestModal] = useState(false);
 
   // Edit event state
@@ -1575,10 +1579,11 @@ function AdminDashboard() {
                               </span>
                             ) : (
                               <div className="flex flex-wrap gap-1">
-                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                                  👨‍⚖️ Judge
-                                </span>
-                                {/* Additional role badges can be added here based on staff roles */}
+                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 border border-blue-200">👨‍⚖️ Judge</span>
+                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">🎭 Backstage</span>
+                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 border border-orange-200">📢 Announcer</span>
+                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-teal-100 text-teal-800 border border-teal-200">✅ Registration</span>
+                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-violet-100 text-violet-800 border border-violet-200">📸 Media</span>
                               </div>
                             )}
                         </td>
@@ -1590,10 +1595,10 @@ function AdminDashboard() {
                               {!judge.isAdmin && (
                                 <>
                                   <button
-                                    onClick={() => {/* TODO: Implement edit roles functionality */}}
+                                    onClick={() => { setShowAssignStaffModal(true); setStaffAssignment({ userId: judge.id, role: 'announcer', eventId: '' }); }}
                                     className="inline-flex items-center px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors"
                                   >
-                                    ⚙️ Roles
+                                    🔗 Assign to Event
                                   </button>
                                   <button
                                     onClick={() => handleDeleteJudge(judge.id, judge.name)}
@@ -3213,6 +3218,119 @@ function AdminDashboard() {
         </div>
             </form>
       </div>
+        </div>
+      )}
+
+      {/* Assign Staff Modal */}
+      {showAssignStaffModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                    <span className="text-white text-lg">🔗</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">Assign Staff to Event</h2>
+                </div>
+                <button onClick={() => setShowAssignStaffModal(false)} className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                  <span className="text-2xl">×</span>
+                </button>
+              </div>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  setIsAssigningStaff(true);
+                  const res = await fetch('/api/admin/staff-assignments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: staffAssignment.userId,
+                      eventId: staffAssignment.eventId,
+                      role: staffAssignment.role,
+                    })
+                  });
+                  const data = await res.json();
+                  if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
+                  setStaffAssignments(prev => [data.assignment, ...prev]);
+                  setShowAssignStaffModal(false);
+                } catch (err) {
+                  console.error(err);
+                  alert('Failed to create assignment');
+                } finally {
+                  setIsAssigningStaff(false);
+                }
+              }}
+              className="p-6"
+            >
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className="lg:col-span-1">
+                  <label className={`block text-sm font-semibold ${themeClasses.textSecondary} mb-3`}>Select Staff Role</label>
+                  <select
+                    value={staffAssignment.role}
+                    onChange={(e) => setStaffAssignment(prev => ({ ...prev, role: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base font-medium"
+                    required
+                  >
+                    <option value="announcer">Announcer</option>
+                    <option value="backstage_manager">Backstage Manager</option>
+                    <option value="registration">Registration</option>
+                    <option value="media">Media</option>
+                  </select>
+                </div>
+
+                <div className="lg:col-span-1">
+                  <label className={`block text-sm font-semibold ${themeClasses.textSecondary} mb-3`}>Staff Member</label>
+                  <select
+                    value={staffAssignment.userId}
+                    onChange={(e) => setStaffAssignment(prev => ({ ...prev, userId: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base font-medium"
+                    required
+                  >
+                    <option value="">Choose a user</option>
+                    {judges.filter(j => !j.isAdmin).map(j => (
+                      <option key={j.id} value={j.id}>{j.name} ({j.email})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="lg:col-span-1">
+                  <label className={`block text-sm font-semibold ${themeClasses.textSecondary} mb-3`}>Event</label>
+                  <select
+                    value={staffAssignment.eventId}
+                    onChange={(e) => setStaffAssignment(prev => ({ ...prev, eventId: e.target.value }))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-base font-medium"
+                    required
+                  >
+                    <option value="">Choose an event</option>
+                    {events.map(event => (
+                      <option key={event.id} value={event.id}>{event.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignStaffModal(false)}
+                  className={`px-6 py-3 border border-gray-300 ${themeClasses.textSecondary} rounded-xl hover:bg-gray-50 transition-colors font-medium`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAssigningStaff}
+                  className="inline-flex items-center space-x-3 px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 shadow-lg font-semibold"
+                >
+                  {isAssigningStaff ? 'Assigning...' : 'Assign Staff'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
