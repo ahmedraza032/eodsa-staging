@@ -1700,10 +1700,12 @@ export const db = {
         ee.music_file_name,
         ee.video_external_url,
         ee.video_external_type,
-        ee.participant_ids
+        ee.participant_ids,
+        e.age_category
       FROM performances p 
       LEFT JOIN contestants c ON p.contestant_id = c.id 
       LEFT JOIN event_entries ee ON p.event_entry_id = ee.id
+      LEFT JOIN events e ON p.event_id = e.id
       WHERE p.event_id = ${eventId}
       ORDER BY p.scheduled_time ASC
     ` as any[];
@@ -1763,7 +1765,8 @@ export const db = {
         videoExternalUrl: row.video_external_url,
         videoExternalType: row.video_external_type,
         announcerNotes: row.announcer_notes || null,
-        musicCue: row.music_cue || null
+        musicCue: row.music_cue || null,
+        ageCategory: row.age_category || null
       } as Performance & { contestantName: string };
     }));
 

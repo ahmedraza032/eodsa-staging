@@ -35,6 +35,15 @@ export async function GET(
         const entry = entries.find(e => e.id === p.eventEntryId);
         return entry && entry.virtualItemNumber ? { ...p, virtualItemNumber: entry.virtualItemNumber } : p;
       });
+      
+      // Debug: Log entry types to help diagnose filtering issues
+      console.log('Performance entry types:', withVirtual.map(p => ({
+        id: p.id,
+        title: p.title,
+        entryType: p.entryType,
+        participantCount: p.participantNames?.length || 0
+      })));
+      
       return NextResponse.json({ success: true, performances: withVirtual });
     } catch {
       return NextResponse.json({ success: true, performances });

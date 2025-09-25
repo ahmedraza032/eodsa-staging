@@ -47,6 +47,10 @@ export default function AnnouncerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('scheduled');
+  const [performanceTypeFilter, setPerformanceTypeFilter] = useState<string>('all');
+  const [presenceFilter, setPresenceFilter] = useState<string>('all');
+  const [styleFilter, setStyleFilter] = useState<string>('all');
+  const [ageCategoryFilter, setAgeCategoryFilter] = useState<string>('all');
   const [presenceByPerformance, setPresenceByPerformance] = useState<Record<string, any>>({});
   const [notesByPerformance, setNotesByPerformance] = useState<Record<string, string>>({});
   const [activePrompt, setActivePrompt] = useState<Performance | null>(null);
@@ -328,6 +332,7 @@ export default function AnnouncerDashboard() {
   // Always hide virtual entries for announcer
   const filteredPerformances = performances.filter(perf => {
     const isLive = (perf.entryType || 'live') === 'live';
+    
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'scheduled' && !perf.announced && perf.status !== 'completed') ||
       (statusFilter === 'announced' && perf.announced) ||
@@ -339,7 +344,28 @@ export default function AnnouncerDashboard() {
       perf.participantNames.some(name => name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (perf.itemNumber && perf.itemNumber.toString().includes(searchTerm));
     
-    return isLive && matchesStatus && matchesSearch;
+    // Performance type filter (based on participant count)
+    const participantCount = perf.participantNames.length;
+    const performanceType = participantCount === 1 ? 'Solo' : 
+                           participantCount === 2 ? 'Duet' : 
+                           participantCount === 3 ? 'Trio' : 'Group';
+    const matchesPerformanceType = performanceTypeFilter === 'all' || performanceType === performanceTypeFilter;
+    
+    // Presence filter
+    const presence = presenceByPerformance[perf.id];
+    const matchesPresence = presenceFilter === 'all' || 
+      (presenceFilter === 'present' && presence?.present) ||
+      (presenceFilter === 'absent' && !presence?.present);
+    
+    // Style filter
+    const matchesStyle = styleFilter === 'all' || 
+      (perf.itemStyle && perf.itemStyle.toLowerCase().includes(styleFilter.toLowerCase()));
+    
+    // Age category filter
+    const matchesAgeCategory = ageCategoryFilter === 'all' || 
+      (perf.ageCategory && perf.ageCategory === ageCategoryFilter);
+    
+    return isLive && matchesStatus && matchesSearch && matchesPerformanceType && matchesPresence && matchesStyle && matchesAgeCategory;
   });
 
   const upcomingPerformances = filteredPerformances.filter(p => !p.announced && p.status !== 'completed');
@@ -565,8 +591,8 @@ export default function AnnouncerDashboard() {
 
           {/* Filters */}
           <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-4 md:space-y-0">
-              <div className="flex-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-black mb-2">Search</label>
                 <input
                   type="text"
@@ -582,7 +608,7 @@ export default function AnnouncerDashboard() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-black"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-black"
                 >
                   <option value="scheduled">Upcoming Items</option>
                   <option value="announced">Announced Items</option>
@@ -590,16 +616,131 @@ export default function AnnouncerDashboard() {
                   <option value="all">All Items</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-black mb-2">Type</label>
+                <select
+                  value={performanceTypeFilter}
+                  onChange={(e) => setPerformanceTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-black"
+                >
+                  <option value="all">All Types</option>
+                  <option value="Solo">Solo</option>
+                  <option value="Duet">Duet</option>
+                  <option value="Trio">Trio</option>
+                  <option value="Group">Group</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-black mb-2">Age Category</label>
+                <select
+                  value={ageCategoryFilter}
+                  onChange={(e) => setAgeCategoryFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-black"
+                >
+                  <option value="all">All Ages</option>
+                  {/* Get unique age categories from performances */}
+                  {Array.from(new Set(performances.map(p => p.ageCategory).filter(Boolean))).sort().map(ageCategory => (
+                    <option key={ageCategory} value={ageCategory}>{ageCategory}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Secondary filter row for additional filters */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-black mb-2">Style Filter</label>
+                  <select
+                    value={styleFilter}
+                    onChange={(e) => setStyleFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-black"
+                  >
+                    <option value="all">All Styles</option>
+                    {/* Get unique styles from performances */}
+                    {Array.from(new Set(performances.map(p => p.itemStyle).filter(Boolean))).sort().map(style => (
+                      <option key={style} value={style}>{style}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-black mb-2">Presence Status</label>
+                  <select
+                    value={presenceFilter}
+                    onChange={(e) => setPresenceFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-black"
+                  >
+                    <option value="all">All Performers</option>
+                    <option value="present">Present</option>
+                    <option value="absent">Not Checked In</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setStatusFilter('scheduled');
+                      setPerformanceTypeFilter('all');
+                      setPresenceFilter('all');
+                      setStyleFilter('all');
+                      setAgeCategoryFilter('all');
+                    }}
+                    className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Performance List */}
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-black flex items-center">
-                <span className="mr-2">📋</span>
-                Program ({filteredPerformances.length} items)
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-black flex items-center">
+                  <span className="mr-2">📋</span>
+                  Program ({filteredPerformances.length} of {performances.length} items)
+                </h2>
+                
+                {/* Active filters indicator */}
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  {statusFilter !== 'scheduled' && (
+                    <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-md">
+                      Status: {statusFilter}
+                    </span>
+                  )}
+                  {performanceTypeFilter !== 'all' && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md">
+                      Type: {performanceTypeFilter}
+                    </span>
+                  )}
+                  {presenceFilter !== 'all' && (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md">
+                      Presence: {presenceFilter}
+                    </span>
+                  )}
+                  {styleFilter !== 'all' && (
+                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md">
+                      Style: {styleFilter}
+                    </span>
+                  )}
+                  {ageCategoryFilter !== 'all' && (
+                    <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-md">
+                      Age: {ageCategoryFilter}
+                    </span>
+                  )}
+                  {searchTerm && (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-md">
+                      Search: "{searchTerm}"
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
             
             {filteredPerformances.length > 0 ? (

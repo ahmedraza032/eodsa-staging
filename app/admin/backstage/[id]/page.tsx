@@ -80,257 +80,192 @@ function SortablePerformanceItem({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`p-4 rounded-lg border-2 transition-all duration-200 cursor-grab active:cursor-grabbing touch-manipulation ${
-        isDragging
-          ? 'bg-purple-600 border-purple-400 shadow-2xl scale-105 rotate-2'
-          : performance.status === 'completed'
-          ? 'bg-green-700 border-green-500'
-          : performance.status === 'in_progress'
-          ? 'bg-blue-700 border-blue-500'
-          : 'bg-gray-700 border-gray-600'
-      }`}
-      title="Drag anywhere on this card to reorder"
+      className={`relative rounded-xl border-2 transition-all duration-150 select-none
+        ${isDragging ? 'z-50 shadow-2xl scale-105' : ''}
+        ${performance.status === 'completed' ? 'bg-green-700 border-green-500' 
+        : performance.status === 'in_progress' ? 'bg-blue-700 border-blue-500'
+        : 'bg-gray-700 border-gray-600'}
+        ${selectedForMove === performance.id ? 'ring-4 ring-yellow-400' : ''}
+      `}
     >
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          {/* Item Number + Performance Order Display */}
-          <div className={`relative ${isDragging ? 'animate-pulse' : ''}`}>
-            <div className={`w-20 h-20 rounded-lg flex flex-col items-center justify-center font-bold border-4 transition-all duration-200 ${
-              isDragging 
-                ? 'bg-yellow-400 border-yellow-300 text-black scale-110' 
-                : performance.status === 'completed'
-                ? 'bg-green-500 border-green-400 text-white'
-                : performance.status === 'in_progress'
-                ? 'bg-blue-500 border-blue-400 text-white'
+      {/* Desktop drag area */}
+      <div
+        {...listeners}
+        className="hidden md:block absolute inset-0 cursor-grab active:cursor-grabbing"
+        style={{
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          touchAction: isDragging ? 'none' : 'manipulation',
+        }}
+      />
+      
+      {/* Mobile/Desktop responsive content */}
+      <div className="p-3 md:p-4">
+        {/* Mobile Layout */}
+        <div className="md:hidden">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-3">
+              {/* Compact item number */}
+              <div className={`w-16 h-16 rounded-lg flex flex-col items-center justify-center font-bold border-2 ${
+                performance.status === 'completed' ? 'bg-green-500 border-green-400 text-white'
+                : performance.status === 'in_progress' ? 'bg-blue-500 border-blue-400 text-white'
                 : 'bg-purple-500 border-purple-400 text-white'
-            }`}>
-              <div className="text-lg leading-none">#{performance.itemNumber || '?'}</div>
-              <div className="text-xs opacity-75 leading-none mt-1">
-                Pos: {performance.performanceOrder || '?'}
+              }`}>
+                <div className="text-sm leading-none">#{performance.itemNumber || '?'}</div>
+                <div className="text-xs opacity-75 leading-none">P{performance.performanceOrder || '?'}</div>
               </div>
+              
+              {/* Mobile select button */}
+              <button
+                onClick={() => setSelectedForMove(selectedForMove === performance.id ? null : performance.id)}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                  selectedForMove === performance.id 
+                    ? 'bg-yellow-400 text-black' 
+                    : 'bg-gray-600 text-white hover:bg-gray-500'
+                }`}
+              >
+                {selectedForMove === performance.id ? 'Selected' : 'Select'}
+              </button>
             </div>
-            {isDragging && (
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-300 rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold text-black">📌</span>
+
+            {/* Mobile reorder buttons */}
+            {selectedForMove === performance.id && (
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => movePerformanceUp(performance.id)}
+                  disabled={performances.findIndex(p => p.id === performance.id) === 0}
+                  className="w-10 h-10 rounded-lg bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => movePerformanceDown(performance.id)}
+                  disabled={performances.findIndex(p => p.id === performance.id) === performances.length - 1}
+                  className="w-10 h-10 rounded-lg bg-blue-600 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  ↓
+                </button>
               </div>
             )}
           </div>
-          
-          <div className={isDragging ? 'opacity-75' : ''}>
-            <h3 className="font-semibold text-lg text-white">{performance.title}</h3>
-            <p className={`text-sm ${isDragging ? 'text-gray-200' : 'text-gray-300'}`}>
-              by {performance.contestantName} | {performance.entryType?.toUpperCase()}
-            </p>
-            <p className={`text-xs ${isDragging ? 'text-gray-300' : 'text-gray-400'}`}>
-              {performance.participantNames.join(', ')}
-            </p>
+
+          {/* Mobile title and info */}
+          <div className="mb-3">
+            <h3 className="font-semibold text-lg text-white leading-tight truncate">{performance.title}</h3>
+            <p className="text-sm text-gray-300 truncate">by {performance.contestantName}</p>
+            <p className="text-xs text-gray-400 truncate">{performance.participantNames.join(', ')}</p>
+          </div>
+
+          {/* Mobile action buttons */}
+          <div className="flex flex-wrap gap-2">
+            {performance.musicFileUrl && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlayMusic(performance);
+                }}
+                className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm"
+              >
+                🎵 Play
+              </button>
+            )}
+            
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onUpdateMusicCue(performance.id, performance.musicCue === 'onstage' ? 'offstage' : 'onstage');
+              }}
+              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                performance.musicCue === 'onstage' ? 'bg-green-600 text-white' : 'bg-gray-600 text-white'
+              }`}
+            >
+              {performance.musicCue === 'onstage' ? 'Onstage' : 'Offstage'}
+            </button>
+
+            <span className={`px-3 py-1 rounded-lg text-sm ${
+              performance.status === 'completed' ? 'bg-green-600 text-white'
+              : performance.status === 'in_progress' ? 'bg-blue-600 text-white'
+              : 'bg-gray-600 text-white'
+            }`}>
+              {performance.status.toUpperCase()}
+            </span>
           </div>
         </div>
 
-        <div className={`flex items-center space-x-2 ${isDragging ? 'opacity-50' : ''}`}>
-          {/* Music/Video Play Button */}
-          {!isDragging && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlayMusic(performance);
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              className={`p-3 rounded-lg transition-all duration-200 border-2 ${
-                performance.entryType === 'live' && performance.musicFileUrl
-                  ? 'bg-green-600 hover:bg-green-700 border-green-400 text-white'
-                  : performance.entryType === 'virtual' && performance.videoExternalUrl
-                  ? 'bg-blue-600 hover:bg-blue-700 border-blue-400 text-white'
-                  : 'bg-gray-600 border-gray-500 text-gray-300 opacity-50 cursor-not-allowed'
-              }`}
-              disabled={!performance.musicFileUrl && !performance.videoExternalUrl}
-              title={
-                performance.entryType === 'live' && performance.musicFileUrl
-                  ? 'Play music'
-                  : performance.entryType === 'virtual' && performance.videoExternalUrl
-                  ? 'Open video'
-                  : 'No media available'
-              }
-            >
-              <span className="text-lg">
-                {performance.entryType === 'live' ? '🎵' : performance.entryType === 'virtual' ? '📹' : '🚫'}
-              </span>
-            </button>
-          )}
-
-          {/* Music Cue Toggle */}
-          {!isDragging && (
-            <div className="flex items-center space-x-2 mr-2">
-              <span className="text-xs text-gray-200">Music:</span>
-              <label className={`px-2 py-1 text-xs rounded cursor-pointer ${performance.musicCue === 'onstage' ? 'bg-green-600' : 'bg-gray-600'}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateMusicCue(performance.id, 'onstage');
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                title="Music starts when contestant is on stage">
-                Onstage
-              </label>
-              <label className={`px-2 py-1 text-xs rounded cursor-pointer ${performance.musicCue === 'offstage' ? 'bg-green-600' : 'bg-gray-600'}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUpdateMusicCue(performance.id, 'offstage');
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                title="Music starts while contestant walks on">
-                Offstage
-              </label>
+        {/* Desktop Layout */}
+        <div className="hidden md:flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            {/* Item Number + Performance Order Display */}
+            <div className={`relative ${isDragging ? 'animate-pulse' : ''}`}>
+              <div className={`w-20 h-20 rounded-xl flex flex-col items-center justify-center font-bold border-4 transition-all duration-150 ${
+                isDragging 
+                  ? 'bg-yellow-400 border-yellow-300 text-black scale-110' 
+                  : performance.status === 'completed'
+                  ? 'bg-green-500 border-green-400 text-white'
+                  : performance.status === 'in_progress'
+                  ? 'bg-blue-500 border-blue-400 text-white'
+                  : 'bg-purple-500 border-purple-400 text-white'
+              }`}>
+                <div className="text-lg leading-none">#{performance.itemNumber || '?'}</div>
+                <div className="text-xs opacity-75 leading-none mt-1">
+                  Pos: {performance.performanceOrder || '?'}
+                </div>
+              </div>
+              {isDragging && (
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-300 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-bold text-black">📌</span>
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Status buttons with full lifecycle control */}
-          {performance.status === 'scheduled' && !isDragging && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updatePerformanceStatus(performance.id, 'ready');
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded font-semibold transition-colors text-sm"
-              >
-                ✅ Ready
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updatePerformanceStatus(performance.id, 'hold');
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded font-semibold transition-colors text-sm"
-              >
-                ⏸️ Hold
-              </button>
-            </>
-          )}
-          
-          {performance.status === 'ready' && !isDragging && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updatePerformanceStatus(performance.id, 'in_progress');
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded font-semibold transition-colors"
-              >
-                ▶️ Start
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updatePerformanceStatus(performance.id, 'hold');
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded font-semibold transition-colors text-sm"
-              >
-                ⏸️ Hold
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updatePerformanceStatus(performance.id, 'scheduled');
-                }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                className="px-2 py-1 bg-gray-600 hover:bg-gray-700 rounded text-xs font-semibold transition-colors"
-                title="Reset to scheduled"
-              >
-                ↩️ Reset
-              </button>
-            </>
-          )}
-          
-          {performance.status === 'hold' && !isDragging && (
-            <>
-              <button
-                onClick={() => updatePerformanceStatus(performance.id, 'ready')}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded font-semibold transition-colors"
-              >
-                ✅ Ready
-              </button>
-              <button
-                onClick={() => updatePerformanceStatus(performance.id, 'scheduled')}
-                className="px-2 py-1 bg-gray-600 hover:bg-gray-700 rounded text-xs font-semibold transition-colors"
-                title="Reset to scheduled"
-              >
-                ↩️ Reset
-              </button>
-            </>
-          )}
-          
-          {performance.status === 'in_progress' && !isDragging && (
-            <>
-              <button
-                onClick={() => updatePerformanceStatus(performance.id, 'completed')}
-                className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded font-semibold transition-colors"
-              >
-                ✅ Complete
-              </button>
-              <button
-                onClick={() => updatePerformanceStatus(performance.id, 'scheduled')}
-                className="px-2 py-1 bg-orange-600 hover:bg-orange-700 rounded text-xs font-semibold transition-colors"
-                title="Reset to scheduled"
-              >
-                ↩️ Reset
-              </button>
-            </>
-          )}
-
-          {performance.status === 'completed' && !isDragging && (
-            <>
-              <button
-                onClick={() => updatePerformanceStatus(performance.id, 'in_progress')}
-                className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-semibold transition-colors"
-                title="Mark as in progress"
-              >
-                ◀️ In Progress
-              </button>
-              <button
-                onClick={() => updatePerformanceStatus(performance.id, 'scheduled')}
-                className="px-2 py-1 bg-orange-600 hover:bg-orange-700 rounded text-xs font-semibold transition-colors"
-                title="Reset to scheduled"
-              >
-                ↩️ Reset
-              </button>
-            </>
-          )}
-
-          {/* Enhanced Status indicator */}
-          <div className={`px-3 py-1 rounded-lg text-xs font-bold border-2 ${
-            performance.status === 'completed' ? 'bg-green-600 border-green-400 text-white' :
-            performance.status === 'in_progress' ? 'bg-blue-600 border-blue-400 text-white animate-pulse' :
-            performance.status === 'ready' ? 'bg-green-500 border-green-300 text-white' :
-            performance.status === 'hold' ? 'bg-yellow-600 border-yellow-400 text-black' :
-            performance.status === 'cancelled' ? 'bg-red-600 border-red-400 text-white' :
-            'bg-gray-600 border-gray-400 text-white'
-          }`}>
-            {performance.status.toUpperCase()}
+            
+            <div className={isDragging ? 'opacity-75' : ''}>
+              <h3 className="font-semibold text-lg text-white leading-tight">{performance.title}</h3>
+              <p className={`text-sm ${isDragging ? 'text-gray-200' : 'text-gray-300'} mt-1`}>
+                by {performance.contestantName} | {performance.entryType?.toUpperCase()}
+              </p>
+              <p className={`text-xs ${isDragging ? 'text-gray-300' : 'text-gray-400'}`}>
+                {performance.participantNames.join(', ')}
+              </p>
+            </div>
           </div>
 
-          {/* Visual drag indicator - entire card is now draggable */}
-          <div 
-            className={`text-gray-300 p-6 rounded-lg transition-all duration-200 pointer-events-none ${
-              isDragging 
-                ? 'bg-yellow-400 text-black scale-110' 
-                : 'bg-gray-600 text-white'
-            }`}
-            style={{ minWidth: '80px', minHeight: '60px' }}
-          >
-            <div className="text-2xl font-bold">⋮⋮</div>
+          {/* Desktop controls */}
+          <div className="flex items-center space-x-2">
+            {/* Music/Video Play Button */}
+            {!isDragging && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlayMusic(performance);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                className={`p-3 rounded-lg transition-all duration-150 border-2 ${
+                  performance.entryType === 'live' && performance.musicFileUrl
+                    ? 'bg-green-600 hover:bg-green-700 border-green-400 text-white'
+                    : performance.entryType === 'virtual' && performance.videoExternalUrl
+                    ? 'bg-blue-600 hover:bg-blue-700 border-blue-400 text-white'
+                    : 'bg-gray-600 border-gray-500 text-gray-300 opacity-50 cursor-not-allowed'
+                }`}
+                disabled={!performance.musicFileUrl && !performance.videoExternalUrl}
+              >
+                {performance.entryType === 'live' ? '🎵' : performance.entryType === 'virtual' ? '📹' : '🚫'}
+              </button>
+            )}
+
+            {/* Status indicator */}
+            <div className={`px-3 py-1 rounded-lg text-xs font-bold border-2 ${
+              performance.status === 'completed' ? 'bg-green-600 border-green-400 text-white' :
+              performance.status === 'in_progress' ? 'bg-blue-600 border-blue-400 text-white animate-pulse' :
+              'bg-gray-600 border-gray-400 text-white'
+            }`}>
+              {performance.status.toUpperCase()}
+            </div>
+
+            {/* Drag indicator */}
+            <div className="text-gray-300 p-3 rounded-lg bg-gray-600 text-white">
+              <div className="text-xl font-bold">⋮⋮</div>
+            </div>
           </div>
         </div>
       </div>
@@ -362,21 +297,23 @@ export default function BackstageDashboard() {
   // Music Player State
   const [musicPlayerOpen, setMusicPlayerOpen] = useState(false);
   const [selectedPerformance, setSelectedPerformance] = useState<Performance | null>(null);
+  // Mobile Reordering State
+  const [selectedForMove, setSelectedForMove] = useState<string | null>(null);
 
   // Socket connection for real-time updates
   const socket = useBackstageSocket(eventId);
 
-  // @dnd-kit sensors for drag interactions - optimized for mobile/tablet
+  // @dnd-kit sensors for drag interactions - optimized for iPhone/mobile
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // Reduced for easier activation
+        distance: 3, // Very small distance for immediate response
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 100, // Shorter delay for responsive touch
-        tolerance: 8, // Slightly more tolerance for touch
+        delay: 50, // Minimal delay for instant mobile response
+        tolerance: 12, // Higher tolerance for finger precision
       },
     }),
     useSensor(KeyboardSensor, {
@@ -682,6 +619,70 @@ export default function BackstageDashboard() {
     setSelectedPerformance(null);
   };
 
+  // Mobile reordering functions
+  const movePerformanceUp = async (performanceId: string) => {
+    const currentIndex = performances.findIndex(p => p.id === performanceId);
+    if (currentIndex <= 0) return;
+    
+    const newPerformances = [...performances];
+    [newPerformances[currentIndex - 1], newPerformances[currentIndex]] = 
+    [newPerformances[currentIndex], newPerformances[currentIndex - 1]];
+    
+    await updatePerformanceOrder(newPerformances);
+  };
+
+  const movePerformanceDown = async (performanceId: string) => {
+    const currentIndex = performances.findIndex(p => p.id === performanceId);
+    if (currentIndex >= performances.length - 1) return;
+    
+    const newPerformances = [...performances];
+    [newPerformances[currentIndex], newPerformances[currentIndex + 1]] = 
+    [newPerformances[currentIndex + 1], newPerformances[currentIndex]];
+    
+    await updatePerformanceOrder(newPerformances);
+  };
+
+  const updatePerformanceOrder = async (reorderedPerformances: Performance[]) => {
+    // Update performance order only (Gabriel's requirement)
+    const updatedPerformances = reorderedPerformances.map((performance, index) => ({
+      ...performance,
+      performanceOrder: index + 1
+    }));
+
+    setPerformances(updatedPerformances);
+
+    try {
+      const response = await fetch('/api/admin/reorder-performances', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId,
+          performances: updatedPerformances.map(p => ({
+            id: p.id,
+            itemNumber: p.itemNumber,
+            performanceOrder: p.performanceOrder
+          }))
+        })
+      });
+
+      if (response.ok) {
+        socket.emit('performance:reorder', {
+          eventId,
+          performances: updatedPerformances.map(p => ({
+            id: p.id,
+            itemNumber: p.itemNumber!,
+            performanceOrder: p.performanceOrder!,
+            displayOrder: p.performanceOrder!
+          }))
+        });
+        success('Order updated');
+      }
+    } catch (err) {
+      console.error('Error updating order:', err);
+      error('Failed to update order');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -804,7 +805,7 @@ export default function BackstageDashboard() {
           <div>
             <h2 className="text-2xl font-bold">Performance Order</h2>
             <p className="text-sm text-gray-400 mt-1">
-              Drag <span className="text-yellow-400">anywhere on a card</span> to reorder performances. Item numbers stay locked, only performance order changes!
+              <span className="md:hidden">Select a card and use ↑↓ buttons</span><span className="hidden md:inline">Drag anywhere on a card</span> to reorder performances. Item numbers stay locked, only performance order changes!
             </p>
           </div>
           <div className="text-right">
