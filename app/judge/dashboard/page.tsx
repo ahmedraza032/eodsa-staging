@@ -649,7 +649,7 @@ export default function JudgeDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-gray-50 flex items-center justify-center h-96">
         <div className="text-center">
           <div className="w-16 h-16 bg-blue-600 rounded-full mx-auto mb-4 flex items-center justify-center animate-pulse">
             <span className="text-white text-lg">⚖️</span>
@@ -684,7 +684,7 @@ export default function JudgeDashboard() {
   return (
     <>
       <RealtimeUpdates eventId={selectedEventId} strictEvent onPerformanceReorder={handlePerformanceReorder} onPerformanceStatus={handlePerformanceStatus}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="bg-gray-50">
       {/* Professional Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 mobile-header">
