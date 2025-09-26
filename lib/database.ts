@@ -53,6 +53,7 @@ export const initializeDatabase = async () => {
     await sqlClient`ALTER TABLE event_entries ADD COLUMN IF NOT EXISTS virtual_item_number INTEGER`;
     await sqlClient`ALTER TABLE events ADD COLUMN IF NOT EXISTS event_end_date TEXT`;
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS item_number INTEGER`;
+    await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS performance_order INTEGER`;
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS withdrawn_from_judging BOOLEAN DEFAULT FALSE`;
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS announced BOOLEAN DEFAULT FALSE`;
     await sqlClient`ALTER TABLE performances ADD COLUMN IF NOT EXISTS announced_by TEXT`;
@@ -692,6 +693,7 @@ export const db = {
       participantNames: JSON.parse(row.participant_names),
       duration: row.duration,
       itemNumber: row.item_number,
+      performanceOrder: row.performance_order,
       withdrawnFromJudging: row.withdrawn_from_judging || false,
       choreographer: row.choreographer,
       mastery: row.mastery,
@@ -1707,7 +1709,7 @@ export const db = {
       LEFT JOIN event_entries ee ON p.event_entry_id = ee.id
       LEFT JOIN events e ON p.event_id = e.id
       WHERE p.event_id = ${eventId}
-      ORDER BY p.scheduled_time ASC
+      ORDER BY COALESCE(p.performance_order, p.item_number, 999) ASC
     ` as any[];
 
     // Resolve participant names if stored values are missing/unknown
@@ -1751,6 +1753,7 @@ export const db = {
         participantNames,
         duration: row.duration,
         itemNumber: row.item_number,
+        performanceOrder: row.performance_order,
         withdrawnFromJudging: row.withdrawn_from_judging || false,
         choreographer: row.choreographer,
         mastery: row.mastery,

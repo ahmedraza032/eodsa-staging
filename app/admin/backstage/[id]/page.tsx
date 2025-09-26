@@ -105,20 +105,6 @@ function SortablePerformanceItem({
         <div className="md:hidden">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
-              {/* Drag handle for ALL devices (large touch target) */}
-              <button
-                aria-label="Drag to reorder"
-                {...listeners}
-                className="w-10 h-16 rounded-lg bg-gray-600 text-white flex flex-col items-center justify-center active:cursor-grabbing cursor-grab select-none"
-                style={{
-                  WebkitTouchCallout: 'none',
-                  WebkitUserSelect: 'none',
-                  touchAction: isDragging ? 'none' : 'manipulation',
-                }}
-              >
-                <span className="text-lg leading-none">⋮</span>
-                <span className="text-lg leading-none -mt-1">⋮</span>
-              </button>
               {/* Compact item number */}
               <div className={`w-16 h-16 rounded-lg flex flex-col items-center justify-center font-bold border-2 ${
                 performance.status === 'completed' ? 'bg-green-500 border-green-400 text-white'
@@ -196,9 +182,57 @@ function SortablePerformanceItem({
               {performance.musicCue === 'onstage' ? 'Onstage' : 'Offstage'}
             </button>
 
+            {/* Mobile Status Controls */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                updatePerformanceStatus(performance.id, 'in_progress');
+              }}
+              disabled={performance.status === 'in_progress'}
+              className={`px-2 py-1 rounded text-sm font-bold ${
+                performance.status === 'in_progress' 
+                  ? 'bg-blue-600 text-white cursor-not-allowed' 
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+              title="Start"
+            >
+              ▶️
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                updatePerformanceStatus(performance.id, 'hold');
+              }}
+              disabled={performance.status !== 'in_progress'}
+              className={`px-2 py-1 rounded text-sm font-bold ${
+                performance.status !== 'in_progress'
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+              }`}
+              title="Pause"
+            >
+              ⏸️
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                updatePerformanceStatus(performance.id, 'completed');
+              }}
+              disabled={performance.status === 'completed'}
+              className={`px-2 py-1 rounded text-sm font-bold ${
+                performance.status === 'completed'
+                  ? 'bg-green-600 text-white cursor-not-allowed'
+                  : 'bg-green-500 hover:bg-green-600 text-white'
+              }`}
+              title="Complete"
+            >
+              ✅
+            </button>
+
             <span className={`px-3 py-1 rounded-lg text-sm ${
               performance.status === 'completed' ? 'bg-green-600 text-white'
               : performance.status === 'in_progress' ? 'bg-blue-600 text-white'
+              : performance.status === 'hold' ? 'bg-yellow-600 text-white'
               : 'bg-gray-600 text-white'
             }`}>
               {performance.status.toUpperCase()}
@@ -209,6 +243,15 @@ function SortablePerformanceItem({
         {/* Desktop Layout */}
         <div className="hidden md:flex justify-between items-center">
           <div className="flex items-center space-x-4">
+            {/* Desktop drag handle */}
+            <button
+              aria-label="Drag to reorder"
+              {...listeners}
+              className="hidden md:flex w-10 h-20 rounded-lg bg-gray-600 text-white flex-col items-center justify-center active:cursor-grabbing cursor-grab select-none"
+            >
+              <span className="text-lg leading-none">⋮</span>
+              <span className="text-lg leading-none -mt-1">⋮</span>
+            </button>
             {/* Item Number + Performance Order Display */}
             <div className={`relative ${isDragging ? 'animate-pulse' : ''}`}>
               <div className={`w-20 h-20 rounded-xl flex flex-col items-center justify-center font-bold border-4 transition-all duration-150 ${
@@ -296,10 +339,51 @@ function SortablePerformanceItem({
               </button>
             )}
 
+            {/* Performance Status Controls */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => updatePerformanceStatus(performance.id, 'in_progress')}
+                disabled={performance.status === 'in_progress'}
+                className={`px-2 py-1 rounded text-xs font-bold ${
+                  performance.status === 'in_progress' 
+                    ? 'bg-blue-600 text-white cursor-not-allowed' 
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+                title="Start Performance"
+              >
+                ▶️
+              </button>
+              <button
+                onClick={() => updatePerformanceStatus(performance.id, 'hold')}
+                disabled={performance.status !== 'in_progress'}
+                className={`px-2 py-1 rounded text-xs font-bold ${
+                  performance.status !== 'in_progress'
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                }`}
+                title="Pause Performance"
+              >
+                ⏸️
+              </button>
+              <button
+                onClick={() => updatePerformanceStatus(performance.id, 'completed')}
+                disabled={performance.status === 'completed'}
+                className={`px-2 py-1 rounded text-xs font-bold ${
+                  performance.status === 'completed'
+                    ? 'bg-green-600 text-white cursor-not-allowed'
+                    : 'bg-green-500 hover:bg-green-600 text-white'
+                }`}
+                title="Complete Performance"
+              >
+                ✅
+              </button>
+            </div>
+
             {/* Status indicator */}
             <div className={`px-3 py-1 rounded-lg text-xs font-bold border-2 ${
               performance.status === 'completed' ? 'bg-green-600 border-green-400 text-white' :
               performance.status === 'in_progress' ? 'bg-blue-600 border-blue-400 text-white animate-pulse' :
+              performance.status === 'hold' ? 'bg-yellow-600 border-yellow-400 text-white' :
               'bg-gray-600 border-gray-400 text-white'
             }`}>
               {performance.status.toUpperCase()}
@@ -845,7 +929,7 @@ export default function BackstageDashboard() {
           <div>
             <h2 className="text-2xl font-bold">Performance Order</h2>
             <p className="text-sm text-gray-400 mt-1">
-              <span className="md:hidden">Select a card and use ↑↓ buttons</span><span className="hidden md:inline">Drag anywhere on a card</span> to reorder performances. Item numbers stay locked, only performance order changes!
+              <span className="md:hidden">Select a card and use ↑↓ buttons</span><span className="hidden md:inline">Use the grip to drag</span> to reorder performances. Item numbers stay locked, only performance order changes!
             </p>
           </div>
           <div className="text-right">

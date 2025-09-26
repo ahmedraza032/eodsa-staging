@@ -37,6 +37,7 @@ interface Performance {
   itemStyle?: string;
   mastery?: string;
   itemNumber?: number;
+  performanceOrder?: number;
   // PHASE 2: Live vs Virtual Entry Support
   entryType?: 'live' | 'virtual';
   musicFileUrl?: string;
@@ -377,8 +378,13 @@ export default function JudgeDashboard() {
           }));
         }));
         
-        // Sort by item number for program order
+        // Sort by performance order (backstage sequence), fallback to item number
         allPerformances.sort((a, b) => {
+          // Primary sort: performanceOrder (backstage sequence)
+          if (a.performanceOrder && b.performanceOrder) {
+            return a.performanceOrder - b.performanceOrder;
+          }
+          // Fallback to item number if performanceOrder missing
           if (a.itemNumber && b.itemNumber) {
             return a.itemNumber - b.itemNumber;
           } else if (a.itemNumber && !b.itemNumber) {

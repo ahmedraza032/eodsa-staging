@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/simple-toast';
 import RealtimeUpdates from '@/components/RealtimeUpdates';
 import { useEffect as ReactUseEffect } from 'react';
+// import InlineMusicControls from '@/components/InlineMusicControls';
 
 interface Performance {
   id: string;
@@ -13,6 +14,7 @@ interface Performance {
   participantNames: string[];
   duration: number;
   itemNumber?: number;
+  performanceOrder?: number;
   status: 'scheduled' | 'ready' | 'hold' | 'in_progress' | 'completed' | 'cancelled';
   entryType?: 'live' | 'virtual';
   announced?: boolean;
@@ -147,8 +149,13 @@ export default function AnnouncerDashboard() {
       const performancesData = await performancesRes.json();
       
       if (performancesData.success) {
-        // Sort by item number, then by creation time
+        // Sort by performance order (backstage sequence), fallback to item number
         const sortedPerformances = performancesData.performances.sort((a: Performance, b: Performance) => {
+          // Primary sort: performanceOrder (backstage sequence)
+          if (a.performanceOrder && b.performanceOrder) {
+            return a.performanceOrder - b.performanceOrder;
+          }
+          // Fallback to item number if performanceOrder missing
           if (a.itemNumber && b.itemNumber) {
             return a.itemNumber - b.itemNumber;
           } else if (a.itemNumber && !b.itemNumber) {
@@ -302,8 +309,11 @@ export default function AnnouncerDashboard() {
         }
         return p;
       });
-      // Keep announcer list sorted by itemNumber (for judging reference), not performance order
+      // Sort by performance order (backstage sequence) for live sync
       merged.sort((a, b) => {
+        // Primary sort: performanceOrder (backstage sequence)
+        if (a.performanceOrder && b.performanceOrder) return a.performanceOrder - b.performanceOrder;
+        // Fallback to item number if performanceOrder missing
         if (a.itemNumber && b.itemNumber) return a.itemNumber - b.itemNumber;
         if (a.itemNumber && !b.itemNumber) return -1;
         if (!a.itemNumber && b.itemNumber) return 1;
@@ -791,6 +801,9 @@ export default function AnnouncerDashboard() {
                                   )}
                                 </>
                               )}
+                              
+                              {/* Music Controls - temporarily disabled */}
+                              
                               <p className={`text-xs ${performance.status === 'completed' ? 'text-green-600' : performance.announced ? 'text-gray-400' : 'text-gray-600'}`}>
                                 {performance.entryType?.toUpperCase()}
                                 <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold ${

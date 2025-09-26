@@ -12,6 +12,7 @@ interface Performance {
   participantNames: string[];
   duration: number;
   itemNumber?: number;
+  performanceOrder?: number;
   status: 'scheduled' | 'ready' | 'hold' | 'in_progress' | 'completed' | 'cancelled';
   entryType?: 'live' | 'virtual';
   mastery?: string;
@@ -116,8 +117,13 @@ export default function RegistrationDashboard() {
       const performancesData = await performancesRes.json();
       
       if (performancesData.success) {
-        // Sort by item number, then by creation time
+        // Sort by performance order (backstage sequence), fallback to item number
         const sortedPerformances = performancesData.performances.sort((a: Performance, b: Performance) => {
+          // Primary sort: performanceOrder (backstage sequence)
+          if (a.performanceOrder && b.performanceOrder) {
+            return a.performanceOrder - b.performanceOrder;
+          }
+          // Fallback to item number if performanceOrder missing
           if (a.itemNumber && b.itemNumber) {
             return a.itemNumber - b.itemNumber;
           } else if (a.itemNumber && !b.itemNumber) {
