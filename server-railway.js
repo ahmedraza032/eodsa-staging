@@ -18,7 +18,12 @@ const getAllowedOrigins = () => {
   // Default origins for development and production
   const origins = [
     'http://localhost:3000',
-    'https://localhost:3000'
+    'https://localhost:3000',
+    // Add common deployment domains
+    'https://eodsa-dev.vercel.app',
+    'https://eodsa-dev-git-main.vercel.app',
+    // Allow all Vercel preview deployments
+    /https:\/\/.*\.vercel\.app$/
   ];
   
   // Add Railway and Vercel domains if available
@@ -46,10 +51,13 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling'],
-  // Railway optimization
-  pingTimeout: 60000,
-  pingInterval: 25000
+  transports: ['polling', 'websocket'], // Polling first for better Render.com compatibility
+  // Render.com optimization
+  pingTimeout: 120000, // Longer timeout for Render.com
+  pingInterval: 30000, // Longer interval
+  // Additional Render.com specific settings
+  connectTimeout: 120000,
+  allowEIO3: true
 });
 
 // Health check endpoint for Railway

@@ -5,9 +5,11 @@ import { useSocket } from '@/hooks/useSocket';
 
 interface RealtimeUpdatesProps {
   eventId: string;
+  role?: 'judge' | 'sound' | 'backstage' | 'announcer' | 'registration' | 'media' | 'general';
   strictEvent?: boolean; // if true, ignore events from other eventIds even during initial load
   onPerformanceReorder?: (performances: any[]) => void;
   onPerformanceStatus?: (data: any) => void;
+  onPerformanceAnnounced?: (data: any) => void;
   onPerformanceMusicCue?: (data: { performanceId: string; musicCue: 'onstage' | 'offstage'; eventId?: string }) => void;
   onEventControl?: (data: any) => void;
   onPresenceUpdate?: (data: any) => void;
@@ -18,9 +20,11 @@ interface RealtimeUpdatesProps {
 
 export default function RealtimeUpdates({
   eventId,
+  role = 'general',
   strictEvent = false,
   onPerformanceReorder,
   onPerformanceStatus,
+  onPerformanceAnnounced,
   onPerformanceMusicCue,
   onEventControl,
   onPresenceUpdate,
@@ -31,7 +35,7 @@ export default function RealtimeUpdates({
   const [notifications, setNotifications] = useState<string[]>([]);
 
   // Join event room and wire listeners using the unified socket hook
-  const socket = useSocket({ eventId, role: 'general' });
+  const socket = useSocket({ eventId, role });
 
   useEffect(() => {
     if (!socket.connected) return;
@@ -50,6 +54,13 @@ export default function RealtimeUpdates({
       if (withinScope(data) && onPerformanceStatus) {
         onPerformanceStatus(data);
         addNotification(`📊 Performance status: ${data.status}`);
+      }
+    };
+
+    const handleAnnounced = (data: any) => {
+      if (withinScope(data) && onPerformanceAnnounced) {
+        onPerformanceAnnounced(data);
+        addNotification(`📢 Performance announced`);
       }
     };
 
@@ -96,6 +107,7 @@ export default function RealtimeUpdates({
 
     socket.on('performance:reorder' as any, handleReorder as any);
     socket.on('performance:status' as any, handleStatus as any);
+    socket.on('performance:announced' as any, handleAnnounced as any);
     socket.on('performance:music_cue' as any, handleMusicCue as any);
     socket.on('event:control' as any, handleEventControl as any);
     socket.on('notification' as any, handleNotification as any);
@@ -106,6 +118,7 @@ export default function RealtimeUpdates({
     return () => {
       socket.off('performance:reorder' as any, handleReorder as any);
       socket.off('performance:status' as any, handleStatus as any);
+      socket.off('performance:announced' as any, handleAnnounced as any);
       socket.off('performance:music_cue' as any, handleMusicCue as any);
       socket.off('event:control' as any, handleEventControl as any);
       socket.off('notification' as any, handleNotification as any);
@@ -113,7 +126,7 @@ export default function RealtimeUpdates({
       socket.off('entry:music_updated' as any, handleMusicUpdated as any);
       socket.off('entry:video_updated' as any, handleVideoUpdated as any);
     };
-  }, [socket.connected, eventId, onPerformanceReorder, onPerformanceStatus, onEventControl, onPresenceUpdate]);
+  }, [socket.connected, eventId, onPerformanceReorder, onPerformanceStatus, onPerformanceAnnounced, onEventControl, onPresenceUpdate]);
 
   // Heartbeat quick sync: every 15s and on window focus, trigger a lightweight refresh via custom event
   useEffect(() => {

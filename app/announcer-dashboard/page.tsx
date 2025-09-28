@@ -472,6 +472,37 @@ export default function AnnouncerDashboard() {
                 </select>
                 <button
                   onClick={() => {
+                    const rows = [['Item #','Item Name','Contestant','Participants','Style','Level','Age Category','Status','Announced','Music Cue','Entry Type','Music File','Presence']];
+                    for (const p of filteredPerformances) {
+                      const presence = presenceByPerformance[p.id];
+                      rows.push([
+                        String(p.itemNumber || ''),
+                        p.title || '',
+                        p.contestantName || '',
+                        Array.isArray(p.participantNames) ? p.participantNames.join('; ') : '',
+                        p.itemStyle || '',
+                        p.mastery || '',
+                        p.ageCategory || '',
+                        p.status || '',
+                        p.announced ? 'Yes' : 'No',
+                        p.musicCue || '',
+                        p.entryType || 'live',
+                        p.musicFileName || (p.musicFileUrl ? 'Yes' : 'No'),
+                        presence?.present ? 'Present' : 'Not Present'
+                      ]);
+                    }
+                    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `announcer-program-${event?.name || 'event'}.csv`; a.click(); URL.revokeObjectURL(url);
+                  }}
+                  className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                >
+                  Export CSV
+                </button>
+                <button
+                  onClick={() => {
                     localStorage.removeItem('announcerSession');
                     router.push('/portal/announcer');
                   }}

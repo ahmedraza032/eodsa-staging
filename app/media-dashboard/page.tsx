@@ -12,10 +12,14 @@ interface Performance {
   participantNames: string[];
   duration: number;
   itemNumber?: number;
+  performanceOrder?: number;
   status: 'scheduled' | 'ready' | 'hold' | 'in_progress' | 'completed' | 'cancelled';
   entryType?: 'live' | 'virtual';
+  announced?: boolean;
+  announcedAt?: string;
   mastery?: string;
   itemStyle?: string;
+  ageCategory?: string;
   choreographer?: string;
   contestantId?: string;
   eodsaId?: string;
@@ -76,6 +80,7 @@ export default function MediaDashboard() {
   const [selectedStudio, setSelectedStudio] = useState<any>(null);
   const [showDancerModal, setShowDancerModal] = useState(false);
   const [showStudioModal, setShowStudioModal] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<string>('');
 
   useEffect(() => {
     // Check authentication
@@ -189,7 +194,7 @@ export default function MediaDashboard() {
   };
 
   const handlePerformanceReorder = (reorderedPerformances: any[]) => {
-    // Merge both itemNumber and performanceOrder safely
+    // Merge both itemNumber (permanent) and performanceOrder (dynamic) from backstage
     setPerformances(prev => {
       const updateMap = new Map(reorderedPerformances.map((r: any) => [r.id, r]));
       const merged = prev.map(p => {
@@ -198,12 +203,16 @@ export default function MediaDashboard() {
           return { 
             ...p, 
             itemNumber: update.itemNumber || p.itemNumber, // Keep permanent item number
-            performanceOrder: update.performanceOrder // Update performance order
+            performanceOrder: update.performanceOrder // Update performance order from backstage
           };
         }
         return p;
       });
+      // Sort by performance order (backstage sequence) for live sync
       merged.sort((a, b) => {
+        // Primary sort: performanceOrder (backstage sequence)
+        if (a.performanceOrder && b.performanceOrder) return a.performanceOrder - b.performanceOrder;
+        // Fallback to item number if performanceOrder missing
         if (a.itemNumber && b.itemNumber) return a.itemNumber - b.itemNumber;
         if (a.itemNumber && !b.itemNumber) return -1;
         if (!a.itemNumber && b.itemNumber) return 1;
@@ -211,6 +220,7 @@ export default function MediaDashboard() {
       });
       return merged;
     });
+    setLastSyncAt(new Date().toLocaleTimeString());
     success('Performance order updated by backstage');
   };
 
@@ -222,6 +232,18 @@ export default function MediaDashboard() {
           : p
       )
     );
+    setLastSyncAt(new Date().toLocaleTimeString());
+  };
+
+  const handlePerformanceAnnounced = (data: any) => {
+    setPerformances(prev => 
+      prev.map(p => 
+        p.id === data.performanceId 
+          ? { ...p, announced: true, announcedAt: data.announcedAt }
+          : p
+      )
+    );
+    setLastSyncAt(new Date().toLocaleTimeString());
   };
 
   // Ensure realtime reorder and status updates are wired via RealtimeUpdates wrapper
@@ -295,9 +317,11 @@ export default function MediaDashboard() {
   return (
     <RealtimeUpdates
       eventId={selectedEvent}
+      role="media"
       strictEvent
       onPerformanceReorder={handlePerformanceReorder}
       onPerformanceStatus={handlePerformanceStatus}
+      onPerformanceAnnounced={handlePerformanceAnnounced}
       onMusicUpdated={(data) => {
         setPerformances(prev => prev.map(p => (
           (p as any).eventEntryId === data.entryId ? { ...p, musicFileUrl: data.musicFileUrl, musicFileName: data.musicFileName } : p
@@ -321,6 +345,11 @@ export default function MediaDashboard() {
                 <div>
                   <h1 className="text-2xl font-bold text-black">Media Dashboard</h1>
                   <p className="text-black">Welcome, {user?.name}</p>
+                  {lastSyncAt && (
+                    <p className="text-xs text-green-600">
+                      🔄 Last sync: {lastSyncAt}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -540,6 +569,12 @@ export default function MediaDashboard() {
                             }`}>
                               {performance.status.toUpperCase()}
                             </span>
+                            
+                            {performance.announced && (
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                📢 ANNOUNCED
+                              </span>
+                            )}
                           </div>
                         </div>
                         
