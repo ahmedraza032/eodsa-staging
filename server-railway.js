@@ -51,12 +51,10 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['polling', 'websocket'], // Polling first for better Render.com compatibility
-  // Render.com optimization
-  pingTimeout: 120000, // Longer timeout for Render.com
-  pingInterval: 30000, // Longer interval
-  // Additional Render.com specific settings
-  connectTimeout: 120000,
+  transports: ['websocket', 'polling'],
+  pingInterval: 25000,
+  pingTimeout: 50000,
+  connectTimeout: 60000,
   allowEIO3: true
 });
 
