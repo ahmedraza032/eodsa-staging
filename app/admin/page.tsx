@@ -1522,7 +1522,6 @@ function AdminDashboard() {
               { id: 'dancers', label: 'Dancers', icon: '💃', color: 'rose' },
               { id: 'studios', label: 'Studios', icon: '🏢', color: 'orange' },
               { id: 'clients', label: 'Staff Accounts', icon: '👤', color: 'emerald' },
-              { id: 'sound-tech', label: 'Sound Tech', icon: '🎵', color: 'blue' },
               { id: 'music-tracking', label: 'Music Upload Tracking', icon: '🎼', color: 'cyan' }
             ].map((tab) => (
                 <button
