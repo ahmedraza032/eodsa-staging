@@ -186,8 +186,8 @@ export default function AdminCertificatesPage() {
     if (!ranking) return;
     
     const percentage = Math.round(ranking.averageScore);
-    // Use October 11, 2025 as the event date for Nationals 2025
-    const eventDate = new Date('2025-10-11').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    // Hard-coded event date for Nationals 2025
+    const eventDate = 'October 11, 2025';
     const baseUrl = `/api/certificates/adjust/image?`;
     const params = new URLSearchParams({
       name: ranking.contestantName || 'Unknown',
@@ -280,8 +280,8 @@ export default function AdminCertificatesPage() {
       for (const winner of winnersToGenerate) {
         try {
           const percentage = Math.round(winner.averageScore);
-          // Use October 11, 2025 as the event date for Nationals 2025
-          const eventDate = new Date('2025-10-11').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          // Hard-coded event date for Nationals 2025
+          const eventDate = 'October 11, 2025';
           
           // Fetch the performance to get the actual dancer ID and EODSA ID
           let dancerId = winner.performanceId; // fallback to performanceId
