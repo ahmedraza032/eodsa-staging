@@ -955,7 +955,8 @@ export default function CompetitionEntryPage() {
               masteryLevel,
               performanceType: 'Solo', // Use Solo to trigger registration fee logic
               participantIds: Array.from(participantIds),
-              includeRegistration: true
+              includeRegistration: true,
+              eventId: eventId // Pass eventId to get event-specific fees
             })
           });
           
@@ -973,8 +974,9 @@ export default function CompetitionEntryPage() {
           }));
         } catch (error) {
           console.error('Error checking registration status:', error);
-          // Fallback to charging all participants (old behavior)
-          registrationFee = uniqueParticipants.size * 300;
+          // Fallback to charging all participants using event configuration
+          const regFeePerDancer = event?.registrationFeePerDancer || 300;
+          registrationFee = uniqueParticipants.size * regFeePerDancer;
         }
       }
     }
@@ -2050,7 +2052,7 @@ export default function CompetitionEntryPage() {
                    </>
                  )}
                  <div className="text-xs text-slate-400">
-                   ({new Set(entries.flatMap(e => e.participantIds)).size} unique participants × R300)
+                   ({new Set(entries.flatMap(e => e.participantIds)).size} unique participants × R{event?.registrationFeePerDancer || 300})
                  </div>
                  
                  {/* Preview total with pending entry */}
