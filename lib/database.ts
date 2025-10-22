@@ -3084,22 +3084,47 @@ export const db = {
     const largeGroupFee = event?.largeGroupFeePerDancer || 190;
     
     // Check registration fee status for participants
+    // IMPORTANT: Check per EVENT, not globally
     if (participantIds.length > 0) {
-      // For groups, check each participant's registration status
+      // For groups, check each participant's registration status FOR THIS EVENT
       for (const participantId of participantIds) {
         try {
-          const registrationStatus = await this.getDancerRegistrationStatus(participantId);
-          if (!registrationStatus.registrationFeePaid) {
-            registrationFee += regFeePerDancer; // Per dancer who hasn't paid
+          let needsRegistration = false;
+
+          if (eventId) {
+            // Check if this dancer has already paid for THIS specific event
+            const paidEntries = await sqlClient`
+              SELECT COUNT(*) as count FROM event_entries
+              WHERE contestant_id = ${participantId}
+              AND event_id = ${eventId}
+              AND payment_status = 'paid'
+              LIMIT 1
+            ` as any[];
+
+            needsRegistration = !paidEntries || paidEntries[0].count === 0;
+          } else {
+            // Fallback to global registration status if no eventId
+            const registrationStatus = await this.getDancerRegistrationStatus(participantId);
+            needsRegistration = !registrationStatus.registrationFeePaid;
+          }
+
+          if (needsRegistration) {
+            registrationFee += regFeePerDancer; // Per dancer who hasn't paid for this event
           }
         } catch (error) {
-          // If dancer not found or error, assume they need to pay registration
+          // If error, assume they need to pay registration
+          console.warn(`Could not check registration for participant ${participantId}:`, error);
           registrationFee += regFeePerDancer;
         }
       }
     } else {
-      // For single participant (solo), assume they need to pay if not specified
-      registrationFee = regFeePerDancer;
+      // For single participant (solo), check if they need registration for this event
+      if (eventId) {
+        // Without participant IDs, we can't check, so assume they need to pay
+        registrationFee = regFeePerDancer;
+      } else {
+        registrationFee = regFeePerDancer;
+      }
     }
     
     // Calculate performance fees based on type
@@ -4477,15 +4502,26 @@ export const unifiedDb = {
   // Get accepted dancers for a studio
   async getStudioDancers(studioId: string) {
     const sqlClient = getSql();
-    const result = await sqlClient`
+
+    // Get NEW system dancers with studio applications
+    const newDancers = await sqlClient`
       SELECT d.*, sa.applied_at, sa.responded_at
       FROM dancers d
       JOIN studio_applications sa ON d.id = sa.dancer_id
       WHERE sa.studio_id = ${studioId} AND sa.status = 'accepted' AND d.approved = true
       ORDER BY sa.responded_at DESC
     ` as any[];
-    
-    return result.map((row: any) => ({
+
+    // Get studio info to match legacy contestants
+    const studio = await this.getStudioById(studioId);
+    const legacyContestants = studio ? await sqlClient`
+      SELECT DISTINCT c.eodsa_id, c.id
+      FROM contestants c
+      WHERE c.type = 'studio' AND (c.email = ${studio.email} OR c.studio_name = ${studio.name})
+    ` as any[] : [];
+
+    // Map new dancers
+    const mappedNewDancers = newDancers.map((row: any) => ({
       id: row.id,
       eodsaId: row.eodsa_id,
       name: row.name,
@@ -4495,8 +4531,26 @@ export const unifiedDb = {
       email: row.email,
       phone: row.phone,
       approved: row.approved,
-      joinedAt: row.responded_at
+      joinedAt: row.responded_at,
+      isLegacy: false
     }));
+
+    // Map legacy contestants
+    const mappedLegacyContestants = legacyContestants.map((row: any) => ({
+      id: row.id,
+      eodsaId: row.eodsa_id,
+      isLegacy: true
+    }));
+
+    // Combine both lists, avoiding duplicates
+    const combinedDancers = [...mappedNewDancers];
+    for (const legacy of mappedLegacyContestants) {
+      if (!combinedDancers.find(d => d.eodsaId === legacy.eodsaId)) {
+        combinedDancers.push(legacy);
+      }
+    }
+
+    return combinedDancers;
   },
 
   // Get all competition entries for a studio's dancers
