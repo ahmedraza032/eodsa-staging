@@ -4513,9 +4513,9 @@ export const unifiedDb = {
     ` as any[];
 
     // Get studio info to match legacy contestants
-    const studio = await this.getStudioById(studioId);
+    const studio = await studioDb.getStudioById(studioId);
     const legacyContestants = studio ? await sqlClient`
-      SELECT DISTINCT c.eodsa_id, c.id
+      SELECT DISTINCT c.eodsa_id, c.id, c.name, c.age, c.date_of_birth, c.national_id, c.email, c.phone
       FROM contestants c
       WHERE c.type = 'studio' AND (c.email = ${studio.email} OR c.studio_name = ${studio.name})
     ` as any[] : [];
@@ -4535,10 +4535,18 @@ export const unifiedDb = {
       isLegacy: false
     }));
 
-    // Map legacy contestants
+    // Map legacy contestants with all required fields
     const mappedLegacyContestants = legacyContestants.map((row: any) => ({
       id: row.id,
       eodsaId: row.eodsa_id,
+      name: row.name || 'Unknown',
+      age: row.age || 0,
+      dateOfBirth: row.date_of_birth || '',
+      nationalId: row.national_id || '',
+      email: row.email || '',
+      phone: row.phone || '',
+      approved: true, // Legacy contestants are considered approved
+      joinedAt: null,
       isLegacy: true
     }));
 
@@ -5354,7 +5362,8 @@ export const unifiedDb = {
     performanceType: string,
     soloCount: number = 1,
     participantCount: number = 1,
-    participantIds: string[] = []
+    participantIds: string[] = [],
+    eventId?: string
   ) {
     const registrationFeePerDancer = 300; // R300 per dancer
     let performanceFee = 0;
