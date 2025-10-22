@@ -572,10 +572,10 @@ export default function CompetitionEntryPage() {
     
     if (performanceType === 'Solo') {
       const solo1 = event.solo1Fee || 400;
-      const solo2 = event.solo2Fee || 750;
-      const solo3 = event.solo3Fee || 1050;
+      const solo2 = event.solo2Fee || 350;
+      const solo3 = event.solo3Fee || 300;
       const additional = event.soloAdditionalFee || 100;
-      return `Solo packages: 1st solo ${symbol}${solo1}, 2 solos ${symbol}${solo2}, 3 solos ${symbol}${solo3}, additional solos ${symbol}${additional} each. Plus ${symbol}${regFee} registration.`;
+      return `Solo pricing: 1st solo ${symbol}${solo1}, 2nd solo ${symbol}${solo2}, 3rd solo ${symbol}${solo3}, additional solos ${symbol}${additional} each. Plus ${symbol}${regFee} registration.`;
     } else if (performanceType === 'Duet' || performanceType === 'Trio') {
       const duoTrioFee = event.duoTrioFeePerDancer || 280;
       return `${symbol}${duoTrioFee} per person + ${symbol}${regFee} registration each`;
@@ -700,19 +700,15 @@ export default function CompetitionEntryPage() {
       // Compute performance-only fee locally using event configuration
       let fee = 0;
       if (capitalizedPerformanceType === 'Solo') {
-        // Use event-specific solo pricing
+        // Use event-specific solo pricing - direct individual prices per solo
         if (soloCount === 1) {
           fee = event?.solo1Fee || 400;
         } else if (soloCount === 2) {
-          // 2nd solo: Calculate incremental cost from package pricing
-          const total2 = event?.solo2Fee || 750;
-          const total1 = event?.solo1Fee || 400;
-          fee = total2 - total1;
+          // 2nd solo: Use solo2Fee as the price for the 2nd solo
+          fee = event?.solo2Fee || 350;
         } else if (soloCount === 3) {
-          // 3rd solo: Calculate incremental cost from package pricing
-          const total3 = event?.solo3Fee || 1050;
-          const total2 = event?.solo2Fee || 750;
-          fee = total3 - total2;
+          // 3rd solo: Use solo3Fee as the price for the 3rd solo
+          fee = event?.solo3Fee || 300;
         } else {
           // 4th+ solos: Additional solo fee
           fee = event?.soloAdditionalFee || 100;
@@ -783,15 +779,11 @@ export default function CompetitionEntryPage() {
       if (totalSoloCount === 1) {
         performanceFee = event?.solo1Fee || 400;
       } else if (totalSoloCount === 2) {
-        // Calculate cumulative, then subtract previous
-        const total2 = event?.solo2Fee || 750;
-        const total1 = event?.solo1Fee || 400;
-        performanceFee = total2 - total1;
+        // 2nd solo: direct price for 2nd solo
+        performanceFee = event?.solo2Fee || 350;
       } else if (totalSoloCount === 3) {
-        // Calculate cumulative, then subtract previous
-        const total3 = event?.solo3Fee || 1050;
-        const total2 = event?.solo2Fee || 750;
-        performanceFee = total3 - total2;
+        // 3rd solo: direct price for 3rd solo
+        performanceFee = event?.solo3Fee || 300;
       } else {
         // More than 3: additional fee
         performanceFee = event?.soloAdditionalFee || 100;
@@ -904,15 +896,11 @@ export default function CompetitionEntryPage() {
           if (soloCount === 1) {
             entry.fee = event?.solo1Fee || 400;
           } else if (soloCount === 2) {
-            // 2nd solo: incremental cost
-            const total2 = event?.solo2Fee || 750;
-            const total1 = event?.solo1Fee || 400;
-            entry.fee = total2 - total1;
+            // 2nd solo: direct price for 2nd solo
+            entry.fee = event?.solo2Fee || 350;
           } else if (soloCount === 3) {
-            // 3rd solo: incremental cost
-            const total3 = event?.solo3Fee || 1050;
-            const total2 = event?.solo2Fee || 750;
-            entry.fee = total3 - total2;
+            // 3rd solo: direct price for 3rd solo
+            entry.fee = event?.solo3Fee || 300;
           } else {
             // 4th+ solos: additional fee
             entry.fee = event?.soloAdditionalFee || 100;
@@ -1909,8 +1897,8 @@ export default function CompetitionEntryPage() {
                     ) && (
                       <div className="text-xs text-slate-400 mt-1">
                         {(existingDbEntries.filter(e => e.participantIds && e.participantIds.length === 1).length + entries.filter(e => e.performanceType === 'Solo').length) === 0 && `1st Solo: ${getCurrencySymbol()}${event?.solo1Fee || 400}`}
-                        {(existingDbEntries.filter(e => e.participantIds && e.participantIds.length === 1).length + entries.filter(e => e.performanceType === 'Solo').length) === 1 && `2nd Solo: ${getCurrencySymbol()}${((event?.solo2Fee || 750) - (event?.solo1Fee || 400))} (Package: ${getCurrencySymbol()}${event?.solo2Fee || 750} total)`}
-                        {(existingDbEntries.filter(e => e.participantIds && e.participantIds.length === 1).length + entries.filter(e => e.performanceType === 'Solo').length) === 2 && `3rd Solo: ${getCurrencySymbol()}${((event?.solo3Fee || 1050) - (event?.solo2Fee || 750))} (Package: ${getCurrencySymbol()}${event?.solo3Fee || 1050} total)`}
+                        {(existingDbEntries.filter(e => e.participantIds && e.participantIds.length === 1).length + entries.filter(e => e.performanceType === 'Solo').length) === 1 && `2nd Solo: ${getCurrencySymbol()}${event?.solo2Fee || 350}`}
+                        {(existingDbEntries.filter(e => e.participantIds && e.participantIds.length === 1).length + entries.filter(e => e.performanceType === 'Solo').length) === 2 && `3rd Solo: ${getCurrencySymbol()}${event?.solo3Fee || 300}`}
                         {(existingDbEntries.filter(e => e.participantIds && e.participantIds.length === 1).length + entries.filter(e => e.performanceType === 'Solo').length) === 3 && `4th Solo: ${getCurrencySymbol()}${event?.soloAdditionalFee || 100}`}
                         {(existingDbEntries.filter(e => e.participantIds && e.participantIds.length === 1).length + entries.filter(e => e.performanceType === 'Solo').length) >= 4 && `5th+ Solo: ${getCurrencySymbol()}${event?.soloAdditionalFee || 100} each`}
                       </div>
