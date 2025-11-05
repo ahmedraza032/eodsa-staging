@@ -6923,6 +6923,10 @@ function AdminDashboard() {
                       {calculateAgeGroup(selectedDancer.date_of_birth)}
                     </p>
                     <p>
+                      <span className="text-gray-400">Province:</span>{" "}
+                      {selectedDancer.province || "Not specified"}
+                    </p>
+                    <p>
                       <span className="text-gray-400">Mastery Level:</span>{" "}
                       <span className="capitalize">
                         {selectedDancer.mastery_level || "Not specified"}
